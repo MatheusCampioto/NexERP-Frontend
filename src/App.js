@@ -2,12 +2,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AppLayout from './components/Layout';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import Pessoas from './pages/Pessoas';
 import Produtos from './pages/Produtos';
 import Estoque from './pages/Estoque';
 import Pedidos from './pages/Pedidos';
 import Financeiro from './pages/Financeiro';
-import Dashboard from './pages/Dashboard';
+import Relatorios from './pages/Relatorios';
 
 const RotaProtegida = ({ children }) => {
   const { token } = useAuth();
@@ -31,6 +32,7 @@ const App = () => {
             <Route path="estoque" element={<Estoque />} />
             <Route path="pedidos" element={<Pedidos />} />
             <Route path="financeiro" element={<Financeiro />} />
+            <Route path="relatorios" element={<Relatorios />} />
           </Route>
         </Routes>
       </BrowserRouter>
