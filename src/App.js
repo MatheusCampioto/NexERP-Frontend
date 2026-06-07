@@ -7,6 +7,7 @@ import Produtos from './pages/Produtos';
 import Estoque from './pages/Estoque';
 import Pedidos from './pages/Pedidos';
 import Financeiro from './pages/Financeiro';
+import Dashboard from './pages/Dashboard';
 
 const RotaProtegida = ({ children }) => {
   const { token } = useAuth();
@@ -24,7 +25,7 @@ const App = () => {
               <AppLayout />
             </RotaProtegida>
           }>
-            <Route index element={<h2>Dashboard — em breve</h2>} />
+            <Route index element={<Dashboard />} />
             <Route path="pessoas" element={<Pessoas />} />
             <Route path="produtos" element={<Produtos />} />
             <Route path="estoque" element={<Estoque />} />
