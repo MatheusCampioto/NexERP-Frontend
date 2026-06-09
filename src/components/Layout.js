@@ -2,7 +2,7 @@ import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined, TeamOutlined, ShoppingOutlined,
   InboxOutlined, FileTextOutlined, DollarOutlined,
-  LogoutOutlined, BarChartOutlined
+  LogoutOutlined, BarChartOutlined, UserOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ const AppLayout = () => {
     { key: '/pedidos', icon: <FileTextOutlined />, label: 'Pedidos' },
     { key: '/financeiro', icon: <DollarOutlined />, label: 'Financeiro' },
     { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios' },
+    { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários' },
     { key: '/logout', icon: <LogoutOutlined />, label: 'Sair', danger: true },
   ];
 

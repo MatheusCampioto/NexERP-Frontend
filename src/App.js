@@ -9,6 +9,7 @@ import Estoque from './pages/Estoque';
 import Pedidos from './pages/Pedidos';
 import Financeiro from './pages/Financeiro';
 import Relatorios from './pages/Relatorios';
+import Usuarios from './pages/Usuarios';
 
 const RotaProtegida = ({ children }) => {
   const { token } = useAuth();
@@ -33,6 +34,7 @@ const App = () => {
             <Route path="pedidos" element={<Pedidos />} />
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="relatorios" element={<Relatorios />} />
+            <Route path="usuarios" element={<Usuarios />} />
           </Route>
         </Routes>
       </BrowserRouter>
