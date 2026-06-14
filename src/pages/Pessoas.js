@@ -1,36 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, Select, message, Popconfirm, Space, Tag, Row, Col } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, message, Popconfirm, Space, Tag, Tabs, Row, Col, DatePicker } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
-import { IMaskInput } from 'react-imask';
 import { listarPessoas, criarPessoa, atualizarPessoa, desativarPessoa } from '../services/pessoasService';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
-
-const validarCPF = (cpf) => {
-  cpf = cpf.replace(/[^\d]/g, '');
-  if (cpf.length !== 11) return false;
-  if (/^(\d)\1+$/.test(cpf)) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
-  let rest = (sum * 10) % 11;
-  if (rest === 10 || rest === 11) rest = 0;
-  if (rest !== parseInt(cpf[9])) return false;
-  sum = 0;
-  for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
-  rest = (sum * 10) % 11;
-  if (rest === 10 || rest === 11) rest = 0;
-  return rest === parseInt(cpf[10]);
-};
-
-const inputStyle = {
-  width: '100%',
-  padding: '4px 11px',
-  borderRadius: 6,
-  border: '1px solid #d9d9d9',
-  fontSize: 14,
-  lineHeight: '22px',
-  outline: 'none',
-};
+const { TextArea } = Input;
 
 const Pessoas = () => {
   const [pessoas, setPessoas] = useState([]);
@@ -38,6 +13,7 @@ const Pessoas = () => {
   const [loading, setLoading] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [pessoaEditando, setPessoaEditando] = useState(null);
+  const [tipoDocumento, setTipoDocumento] = useState('CPF');
   const [busca, setBusca] = useState('');
   const [form] = Form.useForm();
 
@@ -57,75 +33,94 @@ const Pessoas = () => {
   useEffect(() => { carregar(); }, []);
 
   useEffect(() => {
-    const resultado = pessoas.filter(p =>
-      p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      p.email?.toLowerCase().includes(busca.toLowerCase()) ||
-      p.cpF_CNPJ?.includes(busca)
-    );
-    setFiltradas(resultado);
+    if (!busca) { setFiltradas(pessoas); return; }
+    const b = busca.toLowerCase();
+    setFiltradas(pessoas.filter(p =>
+      p.nome?.toLowerCase().includes(b) ||
+      p.razaoSocial?.toLowerCase().includes(b) ||
+      p.nomeFantasia?.toLowerCase().includes(b) ||
+      p.cpf?.includes(busca) ||
+      p.cnpj?.includes(busca) ||
+      p.email?.toLowerCase().includes(b)
+    ));
   }, [busca, pessoas]);
 
   const abrirModal = (pessoa = null) => {
     setPessoaEditando(pessoa);
-    form.setFieldsValue(pessoa ? {
-      ...pessoa,
-      cpfCnpj: pessoa.cpF_CNPJ
-    } : {
-      nome: '', tipo: 'Cliente', cpfCnpj: '',
-      email: '', telefone: '', endereco: '',
-      cidade: '', estado: '', cep: ''
-    });
+    if (pessoa) {
+      setTipoDocumento(pessoa.tipoDocumento || 'CPF');
+      form.setFieldsValue({
+        ...pessoa,
+        dataNascimento: pessoa.dataNascimento ? dayjs(pessoa.dataNascimento) : null,
+      });
+    } else {
+      setTipoDocumento('CPF');
+      form.resetFields();
+      form.setFieldsValue({ tipoDocumento: 'CPF', tipo: 'Cliente' });
+    }
     setModalAberto(true);
-  };
-
-  const fecharModal = () => {
-    setModalAberto(false);
-    setPessoaEditando(null);
-    form.resetFields();
   };
 
   const salvar = async (values) => {
     try {
+      const dados = {
+        ...values,
+        dataNascimento: values.dataNascimento ? values.dataNascimento.toISOString() : null,
+        nome: tipoDocumento === 'CPF' ? values.nome : (values.razaoSocial || ''),
+      };
       if (pessoaEditando) {
-        await atualizarPessoa(pessoaEditando.id, values);
-        message.success('Pessoa atualizada com sucesso!');
+        await atualizarPessoa(pessoaEditando.id, dados);
+        message.success('Pessoa atualizada!');
       } else {
-        await criarPessoa(values);
-        message.success('Pessoa criada com sucesso!');
+        await criarPessoa(dados);
+        message.success('Pessoa cadastrada!');
       }
-      fecharModal();
+      setModalAberto(false);
+      form.resetFields();
       carregar();
     } catch (e) {
-      message.error(e.response?.data?.mensagem || 'Erro ao salvar pessoa.');
+      message.error(e.response?.data?.mensagem || 'Erro ao salvar.');
     }
   };
 
   const desativar = async (id) => {
     try {
       await desativarPessoa(id);
-      message.success('Pessoa desativada com sucesso!');
+      message.success('Pessoa desativada!');
       carregar();
     } catch {
-      message.error('Erro ao desativar pessoa.');
+      message.error('Erro ao desativar.');
     }
   };
 
   const colunas = [
-    { title: 'Nome', dataIndex: 'nome', key: 'nome' },
-    { title: 'Tipo', dataIndex: 'tipo', key: 'tipo',
-      render: (t) => <Tag color={t === 'Cliente' ? 'blue' : t === 'Fornecedor' ? 'green' : 'purple'}>{t}</Tag>
+    {
+      title: 'Nome / Razão Social', key: 'nome',
+      render: (_, r) => r.tipoDocumento === 'CNPJ'
+        ? <><div>{r.razaoSocial}</div><small style={{ color: '#888' }}>{r.nomeFantasia}</small></>
+        : r.nome
     },
-    { title: 'CPF/CNPJ', dataIndex: 'cpF_CNPJ', key: 'cpF_CNPJ' },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
-    { title: 'Telefone', dataIndex: 'telefone', key: 'telefone' },
+    {
+      title: 'Tipo', dataIndex: 'tipo', key: 'tipo',
+      render: (t) => {
+        const cor = { Cliente: 'blue', Fornecedor: 'green', Representante: 'purple' };
+        return <Tag color={cor[t] || 'default'}>{t}</Tag>;
+      }
+    },
+    {
+      title: 'Documento', key: 'documento',
+      render: (_, r) => r.tipoDocumento === 'CNPJ' ? r.cnpj : r.cpf
+    },
+    { title: 'E-mail', dataIndex: 'email', key: 'email' },
+    { title: 'Telefone', key: 'telefone', render: (_, r) => r.celular || r.telefone },
     { title: 'Cidade', dataIndex: 'cidade', key: 'cidade' },
     {
       title: 'Ações', key: 'acoes',
       render: (_, record) => (
         <Space>
-          <Button icon={<EditOutlined />} onClick={() => abrirModal(record)} />
-          <Popconfirm title="Desativar pessoa?" onConfirm={() => desativar(record.id)} okText="Sim" cancelText="Não">
-            <Button icon={<DeleteOutlined />} danger />
+          <Button icon={<EditOutlined />} size="small" onClick={() => abrirModal(record)} />
+          <Popconfirm title="Desativar?" onConfirm={() => desativar(record.id)} okText="Sim" cancelText="Não">
+            <Button icon={<DeleteOutlined />} size="small" danger />
           </Popconfirm>
         </Space>
       )
@@ -142,12 +137,12 @@ const Pessoas = () => {
       </div>
 
       <Input
-        placeholder="Buscar por nome, email ou CPF/CNPJ..."
+        placeholder="Buscar por nome, documento ou e-mail..."
         prefix={<SearchOutlined />}
         value={busca}
         onChange={e => setBusca(e.target.value)}
-        style={{ marginBottom: 16 }}
         allowClear
+        style={{ marginBottom: 16 }}
       />
 
       <Table dataSource={filtradas} columns={colunas} rowKey="id" loading={loading} />
@@ -155,79 +150,209 @@ const Pessoas = () => {
       <Modal
         title={pessoaEditando ? 'Editar Pessoa' : 'Nova Pessoa'}
         open={modalAberto}
-        onCancel={fecharModal}
+        onCancel={() => { setModalAberto(false); form.resetFields(); }}
         onOk={() => form.submit()}
         okText="Salvar"
         cancelText="Cancelar"
-        width={600}
+        width={750}
       >
         <Form form={form} layout="vertical" onFinish={salvar}>
-          <Form.Item name="nome" label="Nome" rules={[
-            { required: true, message: 'Nome é obrigatório' },
-            { min: 3, message: 'Nome deve ter pelo menos 3 caracteres' }
-          ]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="tipo" label="Tipo" rules={[{ required: true, message: 'Tipo é obrigatório' }]}>
-            <Select>
-              <Option value="Cliente">Cliente</Option>
-              <Option value="Fornecedor">Fornecedor</Option>
-              <Option value="Ambos">Ambos</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="cpfCnpj" label="CPF/CNPJ" rules={[
-            {
-              validator: (_, value) => {
-                if (!value || value.replace(/[^\d]/g, '') === '') return Promise.resolve();
-                const digits = value.replace(/[^\d]/g, '');
-                if (digits.length === 11 && !validarCPF(value))
-                  return Promise.reject('CPF inválido');
-                return Promise.resolve();
-              }
-            }
-          ]}>
-            <Input placeholder="000.000.000-00 ou 00.000.000/0000-00" />
-          </Form.Item>
-          <Form.Item name="email" label="Email" rules={[
-            { type: 'email', message: 'Email inválido' }
-          ]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="telefone" label="Telefone">
-            <IMaskInput
-              mask="(00) 00000-0000"
-              placeholder="(00) 00000-0000"
-              style={inputStyle}
-              onAccept={(value) => form.setFieldValue('telefone', value)}
-            />
-          </Form.Item>
-          <Form.Item name="endereco" label="Endereço">
-            <Input />
-          </Form.Item>
-          <Row gutter={8}>
-            <Col span={14}>
-              <Form.Item name="cidade" label="Cidade">
-                <Input />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="tipoDocumento" label="Tipo de Pessoa" initialValue="CPF">
+                <Select onChange={v => { setTipoDocumento(v); form.setFieldsValue({ tipoDocumento: v }); }}>
+                  <Option value="CPF">Pessoa Física (CPF)</Option>
+                  <Option value="CNPJ">Pessoa Jurídica (CNPJ)</Option>
+                </Select>
               </Form.Item>
             </Col>
-            <Col span={4}>
-              <Form.Item name="estado" label="UF" rules={[
-                { max: 2, message: 'Use a sigla do estado' }
-              ]}>
-                <Input maxLength={2} style={{ textTransform: 'uppercase' }} />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="cep" label="CEP">
-                <IMaskInput
-                  mask="00000-000"
-                  placeholder="00000-000"
-                  style={inputStyle}
-                  onAccept={(value) => form.setFieldValue('cep', value)}
-                />
+            <Col span={12}>
+              <Form.Item name="tipo" label="Classificação" initialValue="Cliente">
+                <Select>
+                  <Option value="Cliente">Cliente</Option>
+                  <Option value="Fornecedor">Fornecedor</Option>
+                  <Option value="Representante">Representante</Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
+
+          <Form.Item name="funcao" label="Função / Cargo">
+            <Input placeholder="Ex: Representante Comercial, Distribuidor..." />
+          </Form.Item>
+
+          {tipoDocumento === 'CPF' ? (
+            <>
+              <Row gutter={16}>
+                <Col span={16}>
+                  <Form.Item name="nome" label="Nome Completo" rules={[{ required: true }]}>
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="cpf" label="CPF">
+                    <Input placeholder="000.000.000-00" maxLength={14} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item name="rg" label="RG">
+                    <Input maxLength={20} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="dataNascimento" label="Data de Nascimento">
+                    <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="estadoCivil" label="Estado Civil">
+                    <Select allowClear>
+                      <Option value="Solteiro">Solteiro(a)</Option>
+                      <Option value="Casado">Casado(a)</Option>
+                      <Option value="Divorciado">Divorciado(a)</Option>
+                      <Option value="Viuvo">Viúvo(a)</Option>
+                      <Option value="UniaoEstavel">União Estável</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item name="profissao" label="Profissão">
+                <Input />
+              </Form.Item>
+            </>
+          ) : (
+            <>
+              <Row gutter={16}>
+                <Col span={16}>
+                  <Form.Item name="razaoSocial" label="Razão Social" rules={[{ required: true }]}>
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="cnpj" label="CNPJ">
+                    <Input placeholder="00.000.000/0000-00" maxLength={18} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="nomeFantasia" label="Nome Fantasia">
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="nomeContato" label="Nome do Contato">
+                    <Input />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item name="inscricaoEstadual" label="Inscrição Estadual">
+                    <Input maxLength={20} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="inscricaoMunicipal" label="Inscrição Municipal">
+                    <Input maxLength={20} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="site" label="Site">
+                    <Input placeholder="www.empresa.com.br" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
+
+          <Tabs
+            size="small"
+            style={{ marginTop: 8 }}
+            items={[
+              {
+                key: 'contato',
+                label: 'Contato',
+                children: (
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name="email" label="E-mail">
+                        <Input />
+                      </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                      <Form.Item name="telefone" label="Telefone">
+                        <Input placeholder="(00) 0000-0000" maxLength={15} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                      <Form.Item name="celular" label="Celular">
+                        <Input placeholder="(00) 00000-0000" maxLength={16} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                )
+              },
+              {
+                key: 'endereco',
+                label: 'Endereço',
+                children: (
+                  <>
+                    <Row gutter={16}>
+                      <Col span={6}>
+                        <Form.Item name="cep" label="CEP">
+                          <Input placeholder="00000-000" maxLength={9} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={14}>
+                        <Form.Item name="endereco" label="Logradouro">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={4}>
+                        <Form.Item name="numero" label="Número">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="complemento" label="Complemento">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="bairro" label="Bairro">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item name="cidade" label="Cidade">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={2}>
+                        <Form.Item name="estado" label="UF">
+                          <Input maxLength={2} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </>
+                )
+              },
+              {
+                key: 'obs',
+                label: 'Observação',
+                children: (
+                  <Form.Item name="observacao">
+                    <TextArea rows={4} />
+                  </Form.Item>
+                )
+              }
+            ]}
+          />
         </Form>
       </Modal>
     </>
