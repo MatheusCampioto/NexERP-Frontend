@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, Select, message, Popconfirm, Space, Tag, Tabs, Row, Col, DatePicker } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { listarPessoas, criarPessoa, atualizarPessoa, desativarPessoa } from '../services/pessoasService';
+import { validarCPF, validarCNPJ, formatarCPF, formatarCNPJ } from '../utils/validacoes';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -18,24 +19,24 @@ const Pessoas = () => {
   const [form] = Form.useForm();
 
   const buscarCep = async (cep) => {
-  const cepLimpo = cep.replace(/\D/g, '');
-  if (cepLimpo.length !== 8) return;
-  try {
-    const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-    const data = await response.json();
-    if (data.erro) { message.error('CEP não encontrado.'); return; }
-    form.setFieldsValue({
-      endereco: data.logradouro,
-      bairro: data.bairro,
-      cidade: data.localidade,
-      estado: data.uf,
-      complemento: data.complemento || '',
-    });
-    message.success('Endereço preenchido automaticamente!');
-  } catch {
-    message.error('Erro ao buscar CEP.');
-  }
-};
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) return;
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await response.json();
+      if (data.erro) { message.error('CEP não encontrado.'); return; }
+      form.setFieldsValue({
+        endereco: data.logradouro,
+        bairro: data.bairro,
+        cidade: data.localidade,
+        estado: data.uf,
+        complemento: data.complemento || '',
+      });
+      message.success('Endereço preenchido automaticamente!');
+    } catch {
+      message.error('Erro ao buscar CEP.');
+    }
+  };
 
   const carregar = async () => {
     setLoading(true);
@@ -210,8 +211,22 @@ const Pessoas = () => {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="cpf" label="CPF">
-                    <Input placeholder="000.000.000-00" maxLength={14} />
+                  <Form.Item
+                    name="cpf"
+                    label="CPF"
+                    rules={[{
+                      validator: (_, value) => {
+                        if (!value || value.replace(/\D/g, '').length === 0) return Promise.resolve();
+                        if (!validarCPF(value)) return Promise.reject('CPF inválido.');
+                        return Promise.resolve();
+                      }
+                    }]}
+                  >
+                    <Input
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      onChange={e => form.setFieldsValue({ cpf: formatarCPF(e.target.value) })}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
@@ -251,8 +266,22 @@ const Pessoas = () => {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="cnpj" label="CNPJ">
-                    <Input placeholder="00.000.000/0000-00" maxLength={18} />
+                  <Form.Item
+                    name="cnpj"
+                    label="CNPJ"
+                    rules={[{
+                      validator: (_, value) => {
+                        if (!value || value.replace(/\D/g, '').length === 0) return Promise.resolve();
+                        if (!validarCNPJ(value)) return Promise.reject('CNPJ inválido.');
+                        return Promise.resolve();
+                      }
+                    }]}
+                  >
+                    <Input
+                      placeholder="00.000.000/0000-00"
+                      maxLength={18}
+                      onChange={e => form.setFieldsValue({ cnpj: formatarCNPJ(e.target.value) })}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
@@ -322,13 +351,13 @@ const Pessoas = () => {
                   <>
                     <Row gutter={16}>
                       <Col span={6}>
-<Form.Item name="cep" label="CEP">
-  <Input
-    placeholder="00000-000"
-    maxLength={9}
-    onChange={e => buscarCep(e.target.value)}
-  />
-</Form.Item>
+                        <Form.Item name="cep" label="CEP">
+                          <Input
+                            placeholder="00000-000"
+                            maxLength={9}
+                            onChange={e => buscarCep(e.target.value)}
+                          />
+                        </Form.Item>
                       </Col>
                       <Col span={14}>
                         <Form.Item name="endereco" label="Logradouro">
