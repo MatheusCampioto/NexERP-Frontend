@@ -1,0 +1,357 @@
+import { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Tag, Space, Row, Col, DatePicker, Popconfirm, Divider } from 'antd';
+import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { listarOrdensServico, criarOrdemServico, atualizarStatus, finalizarOrdem, cancelarOrdem } from '../services/ordemServicoService';
+import { listarPessoas } from '../services/pessoasService';
+import dayjs from 'dayjs';
+
+const { Option } = Select;
+const { TextArea } = Input;
+
+const statusCor = {
+  Aberta: 'blue',
+  EmAndamento: 'orange',
+  Concluida: 'green',
+  Cancelada: 'red',
+};
+
+const prioridadeCor = {
+  Baixa: 'default',
+  Normal: 'blue',
+  Alta: 'orange',
+  Urgente: 'red',
+};
+
+const OrdemServico = () => {
+  const [ordens, setOrdens] = useState([]);
+  const [pessoas, setPessoas] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalNova, setModalNova] = useState(false);
+  const [modalDetalhe, setModalDetalhe] = useState(false);
+  const [modalFinalizar, setModalFinalizar] = useState(false);
+  const [ordemSelecionada, setOrdemSelecionada] = useState(null);
+  const [itens, setItens] = useState([{ descricao: '', quantidade: 1, valorUnitario: 0 }]);
+  const [form] = Form.useForm();
+  const [formFinalizar] = Form.useForm();
+
+  const carregar = async () => {
+    setLoading(true);
+    try {
+      const [o, p] = await Promise.all([listarOrdensServico(), listarPessoas()]);
+      setOrdens(o);
+      setPessoas(p);
+    } catch {
+      message.error('Erro ao carregar dados.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { carregar(); }, []);
+
+  const salvar = async (values) => {
+    try {
+      await criarOrdemServico({
+        pessoaId: values.pessoaId,
+        titulo: values.titulo,
+        descricao: values.descricao,
+        prioridade: values.prioridade,
+        valorEstimado: values.valorEstimado,
+        dataPrevista: values.dataPrevista ? values.dataPrevista.toISOString() : null,
+        tecnico: values.tecnico,
+        observacao: values.observacao,
+        itens: itens.filter(i => i.descricao),
+      });
+      message.success('Ordem de serviço criada!');
+      setModalNova(false);
+      form.resetFields();
+      setItens([{ descricao: '', quantidade: 1, valorUnitario: 0 }]);
+      carregar();
+    } catch (e) {
+      message.error(e.response?.data?.mensagem || 'Erro ao criar ordem.');
+    }
+  };
+
+  const mudarStatus = async (id, status) => {
+    try {
+      await atualizarStatus(id, status);
+      message.success(`Status atualizado para ${status}!`);
+      carregar();
+    } catch (e) {
+      message.error(e.response?.data?.mensagem || 'Erro ao atualizar status.');
+    }
+  };
+
+  const finalizar = async (values) => {
+    try {
+      await finalizarOrdem(ordemSelecionada.id, values.valorFinal, values.observacao);
+      message.success('Ordem finalizada!');
+      setModalFinalizar(false);
+      formFinalizar.resetFields();
+      carregar();
+    } catch (e) {
+      message.error(e.response?.data?.mensagem || 'Erro ao finalizar ordem.');
+    }
+  };
+
+  const cancelar = async (id) => {
+    try {
+      await cancelarOrdem(id);
+      message.success('Ordem cancelada!');
+      carregar();
+    } catch (e) {
+      message.error(e.response?.data?.mensagem || 'Erro ao cancelar ordem.');
+    }
+  };
+
+  const adicionarItem = () => {
+    setItens([...itens, { descricao: '', quantidade: 1, valorUnitario: 0 }]);
+  };
+
+  const atualizarItem = (index, campo, valor) => {
+    const novosItens = [...itens];
+    novosItens[index][campo] = valor;
+    setItens(novosItens);
+  };
+
+  const removerItem = (index) => {
+    setItens(itens.filter((_, i) => i !== index));
+  };
+
+  const colunas = [
+    { title: '#', dataIndex: 'id', key: 'id', width: 60 },
+    { title: 'Título', dataIndex: 'titulo', key: 'titulo' },
+    {
+      title: 'Cliente', key: 'cliente',
+      render: (_, r) => r.pessoa?.nome || '-'
+    },
+    {
+      title: 'Status', dataIndex: 'status', key: 'status',
+      render: (s) => <Tag color={statusCor[s]}>{s}</Tag>
+    },
+    {
+      title: 'Prioridade', dataIndex: 'prioridade', key: 'prioridade',
+      render: (p) => <Tag color={prioridadeCor[p]}>{p}</Tag>
+    },
+    {
+      title: 'Valor Est.', dataIndex: 'valorEstimado', key: 'valorEstimado',
+      render: (v) => v ? `R$ ${v.toFixed(2)}` : '-'
+    },
+    {
+      title: 'Data Prevista', dataIndex: 'dataPrevista', key: 'dataPrevista',
+      render: (d) => d ? dayjs(d).format('DD/MM/YYYY') : '-'
+    },
+    {
+      title: 'Ações', key: 'acoes',
+      render: (_, record) => (
+        <Space>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => { setOrdemSelecionada(record); setModalDetalhe(true); }}>
+            Ver
+          </Button>
+          {record.status === 'Aberta' && (
+            <Button size="small" onClick={() => mudarStatus(record.id, 'EmAndamento')}>
+              Iniciar
+            </Button>
+          )}
+          {(record.status === 'Aberta' || record.status === 'EmAndamento') && (
+            <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => { setOrdemSelecionada(record); setModalFinalizar(true); }}>
+              Finalizar
+            </Button>
+          )}
+          {record.status !== 'Concluida' && record.status !== 'Cancelada' && (
+            <Popconfirm title="Cancelar ordem?" onConfirm={() => cancelar(record.id)} okText="Sim" cancelText="Não">
+              <Button size="small" danger icon={<CloseOutlined />}>Cancelar</Button>
+            </Popconfirm>
+          )}
+        </Space>
+      )
+    }
+  ];
+
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2>Ordens de Serviço</h2>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalNova(true)}>
+          Nova OS
+        </Button>
+      </div>
+
+      <Table dataSource={ordens} columns={colunas} rowKey="id" loading={loading} />
+
+      {/* Modal Nova OS */}
+      <Modal
+        title="Nova Ordem de Serviço"
+        open={modalNova}
+        onCancel={() => { setModalNova(false); form.resetFields(); setItens([{ descricao: '', quantidade: 1, valorUnitario: 0 }]); }}
+        onOk={() => form.submit()}
+        okText="Salvar"
+        cancelText="Cancelar"
+        width={750}
+      >
+        <Form form={form} layout="vertical" onFinish={salvar}>
+          <Row gutter={16}>
+            <Col span={16}>
+              <Form.Item name="titulo" label="Título" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="prioridade" label="Prioridade" initialValue="Normal">
+                <Select>
+                  <Option value="Baixa">Baixa</Option>
+                  <Option value="Normal">Normal</Option>
+                  <Option value="Alta">Alta</Option>
+                  <Option value="Urgente">Urgente</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="pessoaId" label="Cliente" rules={[{ required: true }]}>
+                <Select showSearch optionFilterProp="children" placeholder="Selecione o cliente">
+                  {pessoas.map(p => <Option key={p.id} value={p.id}>{p.nome}</Option>)}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="tecnico" label="Técnico Responsável">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="descricao" label="Descrição do Problema">
+            <TextArea rows={2} />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="valorEstimado" label="Valor Estimado">
+                <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="dataPrevista" label="Data Prevista">
+                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>Itens / Serviços</Divider>
+          {itens.map((item, index) => (
+            <Row gutter={8} key={index} style={{ marginBottom: 8 }}>
+              <Col span={10}>
+                <Input
+                  placeholder="Descrição"
+                  value={item.descricao}
+                  onChange={e => atualizarItem(index, 'descricao', e.target.value)}
+                />
+              </Col>
+              <Col span={5}>
+                <InputNumber
+                  placeholder="Qtd"
+                  min={0}
+                  precision={2}
+                  value={item.quantidade}
+                  onChange={v => atualizarItem(index, 'quantidade', v)}
+                  style={{ width: '100%' }}
+                />
+              </Col>
+              <Col span={6}>
+                <InputNumber
+                  placeholder="Valor Unit."
+                  min={0}
+                  precision={2}
+                  prefix="R$"
+                  value={item.valorUnitario}
+                  onChange={v => atualizarItem(index, 'valorUnitario', v)}
+                  style={{ width: '100%' }}
+                />
+              </Col>
+              <Col span={3}>
+                <Button danger onClick={() => removerItem(index)} disabled={itens.length === 1}>X</Button>
+              </Col>
+            </Row>
+          ))}
+          <Button type="dashed" onClick={adicionarItem} block style={{ marginBottom: 8 }}>
+            + Adicionar Item
+          </Button>
+
+          <Form.Item name="observacao" label="Observação">
+            <TextArea rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Detalhe */}
+      <Modal
+        title={`OS #${ordemSelecionada?.id} — ${ordemSelecionada?.titulo}`}
+        open={modalDetalhe}
+        onCancel={() => setModalDetalhe(false)}
+        footer={null}
+        width={650}
+      >
+        {ordemSelecionada && (
+          <>
+            <Row gutter={16}>
+              <Col span={12}><b>Cliente:</b> {ordemSelecionada.pessoa?.nome}</Col>
+              <Col span={12}><b>Técnico:</b> {ordemSelecionada.tecnico || '-'}</Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><b>Status:</b> <Tag color={statusCor[ordemSelecionada.status]}>{ordemSelecionada.status}</Tag></Col>
+              <Col span={12}><b>Prioridade:</b> <Tag color={prioridadeCor[ordemSelecionada.prioridade]}>{ordemSelecionada.prioridade}</Tag></Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><b>Valor Estimado:</b> {ordemSelecionada.valorEstimado ? `R$ ${ordemSelecionada.valorEstimado.toFixed(2)}` : '-'}</Col>
+              <Col span={12}><b>Valor Final:</b> {ordemSelecionada.valorFinal ? `R$ ${ordemSelecionada.valorFinal.toFixed(2)}` : '-'}</Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><b>Data Prevista:</b> {ordemSelecionada.dataPrevista ? dayjs(ordemSelecionada.dataPrevista).format('DD/MM/YYYY') : '-'}</Col>
+              <Col span={12}><b>Data Conclusão:</b> {ordemSelecionada.dataConclusao ? dayjs(ordemSelecionada.dataConclusao).format('DD/MM/YYYY') : '-'}</Col>
+            </Row>
+            {ordemSelecionada.descricao && <><Divider /><b>Descrição:</b><p>{ordemSelecionada.descricao}</p></>}
+            {ordemSelecionada.observacao && <><b>Observação:</b><p>{ordemSelecionada.observacao}</p></>}
+            {ordemSelecionada.itens?.length > 0 && (
+              <>
+                <Divider>Itens</Divider>
+                <Table
+                  dataSource={ordemSelecionada.itens}
+                  rowKey="id"
+                  size="small"
+                  pagination={false}
+                  columns={[
+                    { title: 'Descrição', dataIndex: 'descricao', key: 'descricao' },
+                    { title: 'Qtd', dataIndex: 'quantidade', key: 'quantidade' },
+                    { title: 'Valor Unit.', dataIndex: 'valorUnitario', key: 'valorUnitario', render: v => `R$ ${v.toFixed(2)}` },
+                    { title: 'Subtotal', key: 'subtotal', render: (_, r) => `R$ ${(r.quantidade * r.valorUnitario).toFixed(2)}` },
+                  ]}
+                />
+              </>
+            )}
+          </>
+        )}
+      </Modal>
+
+      {/* Modal Finalizar */}
+      <Modal
+        title="Finalizar Ordem de Serviço"
+        open={modalFinalizar}
+        onCancel={() => { setModalFinalizar(false); formFinalizar.resetFields(); }}
+        onOk={() => formFinalizar.submit()}
+        okText="Finalizar"
+        cancelText="Cancelar"
+      >
+        <Form form={formFinalizar} layout="vertical" onFinish={finalizar}>
+          <Form.Item name="valorFinal" label="Valor Final Cobrado" rules={[{ required: true }]}>
+            <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="observacao" label="Observação Final">
+            <TextArea rows={3} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+};
+
+export default OrdemServico;

@@ -2,7 +2,7 @@ import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined, TeamOutlined, ShoppingOutlined,
   InboxOutlined, FileTextOutlined, DollarOutlined,
-  LogoutOutlined, BarChartOutlined, UserOutlined
+  LogoutOutlined, BarChartOutlined, UserOutlined, ToolOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -15,12 +15,13 @@ const AppLayout = () => {
   const { usuario, logout } = useAuth();
 
   const menuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
+    { key: '/', icon: <DashboardOutlined />, label: 'Painel' },
     { key: '/pessoas', icon: <TeamOutlined />, label: 'Pessoas' },
     { key: '/produtos', icon: <ShoppingOutlined />, label: 'Produtos' },
     { key: '/estoque', icon: <InboxOutlined />, label: 'Estoque' },
     { key: '/pedidos', icon: <FileTextOutlined />, label: 'Pedidos' },
     { key: '/financeiro', icon: <DollarOutlined />, label: 'Financeiro' },
+    { key: '/ordemservico', icon: <ToolOutlined />, label: 'Ordem de Serviço' },
     { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios' },
     { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários' },
     { key: '/logout', icon: <LogoutOutlined />, label: 'Sair', danger: true },
