@@ -2,7 +2,7 @@ import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined, TeamOutlined, ShoppingOutlined,
   InboxOutlined, FileTextOutlined, DollarOutlined,
-  LogoutOutlined, BarChartOutlined, UserOutlined, ToolOutlined
+  LogoutOutlined, BarChartOutlined, UserOutlined, ToolOutlined, ShoppingCartOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,7 @@ const AppLayout = () => {
     { key: '/produtos', icon: <ShoppingOutlined />, label: 'Produtos' },
     { key: '/estoque', icon: <InboxOutlined />, label: 'Estoque' },
     { key: '/pedidos', icon: <FileTextOutlined />, label: 'Pedidos' },
+    { key: '/compras', icon: <ShoppingCartOutlined />, label: 'Compras' },
     { key: '/financeiro', icon: <DollarOutlined />, label: 'Financeiro' },
     { key: '/ordemservico', icon: <ToolOutlined />, label: 'Ordem de Serviço' },
     { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios' },
