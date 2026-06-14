@@ -17,6 +17,26 @@ const Pessoas = () => {
   const [busca, setBusca] = useState('');
   const [form] = Form.useForm();
 
+  const buscarCep = async (cep) => {
+  const cepLimpo = cep.replace(/\D/g, '');
+  if (cepLimpo.length !== 8) return;
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+    const data = await response.json();
+    if (data.erro) { message.error('CEP não encontrado.'); return; }
+    form.setFieldsValue({
+      endereco: data.logradouro,
+      bairro: data.bairro,
+      cidade: data.localidade,
+      estado: data.uf,
+      complemento: data.complemento || '',
+    });
+    message.success('Endereço preenchido automaticamente!');
+  } catch {
+    message.error('Erro ao buscar CEP.');
+  }
+};
+
   const carregar = async () => {
     setLoading(true);
     try {
@@ -302,9 +322,13 @@ const Pessoas = () => {
                   <>
                     <Row gutter={16}>
                       <Col span={6}>
-                        <Form.Item name="cep" label="CEP">
-                          <Input placeholder="00000-000" maxLength={9} />
-                        </Form.Item>
+<Form.Item name="cep" label="CEP">
+  <Input
+    placeholder="00000-000"
+    maxLength={9}
+    onChange={e => buscarCep(e.target.value)}
+  />
+</Form.Item>
                       </Col>
                       <Col span={14}>
                         <Form.Item name="endereco" label="Logradouro">
