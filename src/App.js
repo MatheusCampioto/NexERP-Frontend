@@ -12,6 +12,7 @@ import Relatorios from './pages/Relatorios';
 import Usuarios from './pages/Usuarios';
 import OrdemServico from './pages/OrdemServico';
 import Compras from './pages/Compras';
+import Perfil from './pages/Perfil';
 
 const RotaProtegida = ({ children }) => {
   const { token } = useAuth();
@@ -39,6 +40,7 @@ const App = () => {
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="ordemservico" element={<OrdemServico />} />
             <Route path="compras" element={<Compras />} />
+            <Route path="perfil" element={<Perfil />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -25,6 +25,7 @@ const AppLayout = () => {
     { key: '/ordemservico', icon: <ToolOutlined />, label: 'Ordem de Serviço' },
     { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios' },
     { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários' },
+    { key: '/perfil', icon: <UserOutlined />, label: 'Meu Perfil' },
     { key: '/logout', icon: <LogoutOutlined />, label: 'Sair', danger: true },
   ];
 
@@ -53,7 +54,9 @@ const AppLayout = () => {
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <span>Olá, {usuario?.nome}</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => navigate('/perfil')}>
+            Olá, {usuario?.nome}
+          </span>
         </Header>
         <Content style={{ margin: '24px', background: '#fff', padding: '24px', borderRadius: 8 }}>
           <Outlet />
