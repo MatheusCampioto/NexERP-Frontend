@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { listarSolicitacoes } from '../services/comprasService';
 import { listarLancamentos } from '../services/financeiroService';
 import { listarProdutos } from '../services/produtosService';
+import { SettingOutlined } from '@ant-design/icons';
 
 const { Sider, Content, Header } = Layout;
 
@@ -58,6 +59,7 @@ const AppLayout = () => {
     { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios', modulo: 'relatorios' },
     { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários', modulo: 'usuarios' },
     { key: '/perfil', icon: <UserOutlined />, label: 'Meu Perfil', modulo: null },
+    { key: '/configuracoes', icon: <SettingOutlined />, label: 'Configurações', modulo: null },
     { key: '/logout', icon: <LogoutOutlined />, label: 'Sair', danger: true, modulo: null },
   ];
 
