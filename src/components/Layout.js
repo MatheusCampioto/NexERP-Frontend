@@ -16,7 +16,7 @@ const { Sider, Content, Header } = Layout;
 const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { usuario, logout } = useAuth();
+  const { usuario, logout, temAcesso } = useAuth();
   const [badges, setBadges] = useState({ solicitacoes: 0, contas: 0, estoque: 0 });
 
   useEffect(() => {
@@ -46,20 +46,25 @@ const AppLayout = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const menuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: 'Painel' },
-    { key: '/pessoas', icon: <TeamOutlined />, label: 'Pessoas' },
-    { key: '/produtos', icon: <ShoppingOutlined />, label: <span style={{ color: 'white' }}>Produtos {badges.estoque > 0 && <Badge count={badges.estoque} size="small" style={{ marginLeft: 4 }} />}</span> },
-    { key: '/estoque', icon: <InboxOutlined />, label: <span style={{ color: 'white' }}>Estoque {badges.estoque > 0 && <Badge count={badges.estoque} size="small" style={{ marginLeft: 4 }} />}</span> },
-    { key: '/pedidos', icon: <FileTextOutlined />, label: 'Pedidos' },
-    { key: '/compras', icon: <ShoppingCartOutlined />, label: <span style={{ color: 'white' }}>Compras {badges.solicitacoes > 0 && <Badge count={badges.solicitacoes} size="small" style={{ marginLeft: 4 }} />}</span> },
-    { key: '/financeiro', icon: <DollarOutlined />, label: <span style={{ color: 'white' }}>Financeiro {badges.contas > 0 && <Badge count={badges.contas} size="small" style={{ marginLeft: 4 }} />}</span> },
-    { key: '/ordemservico', icon: <ToolOutlined />, label: 'Ordem de Serviço' },
-    { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios' },
-    { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários' },
-    { key: '/perfil', icon: <UserOutlined />, label: 'Meu Perfil' },
-    { key: '/logout', icon: <LogoutOutlined />, label: 'Sair', danger: true },
+  const todosItens = [
+    { key: '/', icon: <DashboardOutlined />, label: 'Painel', modulo: null },
+    { key: '/pessoas', icon: <TeamOutlined />, label: 'Pessoas', modulo: 'pessoas' },
+    { key: '/produtos', icon: <ShoppingOutlined />, label: <span style={{ color: 'white' }}>Produtos {badges.estoque > 0 && <Badge count={badges.estoque} size="small" style={{ marginLeft: 4 }} />}</span>, modulo: 'produtos' },
+    { key: '/estoque', icon: <InboxOutlined />, label: <span style={{ color: 'white' }}>Estoque {badges.estoque > 0 && <Badge count={badges.estoque} size="small" style={{ marginLeft: 4 }} />}</span>, modulo: 'estoque' },
+    { key: '/pedidos', icon: <FileTextOutlined />, label: 'Pedidos', modulo: 'pedidos' },
+    { key: '/compras', icon: <ShoppingCartOutlined />, label: <span style={{ color: 'white' }}>Compras {badges.solicitacoes > 0 && <Badge count={badges.solicitacoes} size="small" style={{ marginLeft: 4 }} />}</span>, modulo: 'pedidos' },
+    { key: '/financeiro', icon: <DollarOutlined />, label: <span style={{ color: 'white' }}>Financeiro {badges.contas > 0 && <Badge count={badges.contas} size="small" style={{ marginLeft: 4 }} />}</span>, modulo: 'financeiro' },
+    { key: '/ordemservico', icon: <ToolOutlined />, label: 'Ordem de Serviço', modulo: 'pedidos' },
+    { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios', modulo: 'relatorios' },
+    { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários', modulo: 'usuarios' },
+    { key: '/perfil', icon: <UserOutlined />, label: 'Meu Perfil', modulo: null },
+    { key: '/logout', icon: <LogoutOutlined />, label: 'Sair', danger: true, modulo: null },
   ];
+
+  const menuItems = todosItens.filter(item => {
+    if (item.modulo === null) return true;
+    return temAcesso(item.modulo);
+  });
 
   const handleMenu = ({ key }) => {
     if (key === '/logout') {

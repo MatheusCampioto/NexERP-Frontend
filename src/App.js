@@ -15,8 +15,16 @@ import Compras from './pages/Compras';
 import Perfil from './pages/Perfil';
 
 const RotaProtegida = ({ children }) => {
-  const { token } = useAuth();
+  const { token, carregando } = useAuth();
+  if (carregando) return null;
   return token ? children : <Navigate to="/login" />;
+};
+
+const RotaComAcesso = ({ children, modulo }) => {
+  const { temAcesso, carregando } = useAuth();
+  if (carregando) return null;
+  if (!temAcesso(modulo)) return <Navigate to="/" />;
+  return children;
 };
 
 const App = () => {
@@ -31,15 +39,15 @@ const App = () => {
             </RotaProtegida>
           }>
             <Route index element={<Dashboard />} />
-            <Route path="pessoas" element={<Pessoas />} />
-            <Route path="produtos" element={<Produtos />} />
-            <Route path="estoque" element={<Estoque />} />
-            <Route path="pedidos" element={<Pedidos />} />
-            <Route path="financeiro" element={<Financeiro />} />
-            <Route path="relatorios" element={<Relatorios />} />
-            <Route path="usuarios" element={<Usuarios />} />
-            <Route path="ordemservico" element={<OrdemServico />} />
-            <Route path="compras" element={<Compras />} />
+            <Route path="pessoas" element={<RotaComAcesso modulo="pessoas"><Pessoas /></RotaComAcesso>} />
+            <Route path="produtos" element={<RotaComAcesso modulo="produtos"><Produtos /></RotaComAcesso>} />
+            <Route path="estoque" element={<RotaComAcesso modulo="estoque"><Estoque /></RotaComAcesso>} />
+            <Route path="pedidos" element={<RotaComAcesso modulo="pedidos"><Pedidos /></RotaComAcesso>} />
+            <Route path="compras" element={<RotaComAcesso modulo="pedidos"><Compras /></RotaComAcesso>} />
+            <Route path="financeiro" element={<RotaComAcesso modulo="financeiro"><Financeiro /></RotaComAcesso>} />
+            <Route path="ordemservico" element={<RotaComAcesso modulo="pedidos"><OrdemServico /></RotaComAcesso>} />
+            <Route path="relatorios" element={<RotaComAcesso modulo="relatorios"><Relatorios /></RotaComAcesso>} />
+            <Route path="usuarios" element={<RotaComAcesso modulo="usuarios"><Usuarios /></RotaComAcesso>} />
             <Route path="perfil" element={<Perfil />} />
           </Route>
         </Routes>
