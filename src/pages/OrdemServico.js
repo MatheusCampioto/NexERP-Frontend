@@ -4,6 +4,9 @@ import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-de
 import { listarOrdensServico, criarOrdemServico, atualizarStatus, finalizarOrdem, cancelarOrdem } from '../services/ordemServicoService';
 import { listarPessoas } from '../services/pessoasService';
 import dayjs from 'dayjs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { PrinterOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -104,6 +107,65 @@ const OrdemServico = () => {
     }
   };
 
+  const imprimirOS = (os) => {
+    const doc = new jsPDF();
+    const agora = dayjs().format('DD/MM/YYYY HH:mm');
+
+    doc.setFontSize(18);
+    doc.text('NexERP', 14, 16);
+    doc.setFontSize(14);
+    doc.text(`Ordem de Serviço #${os.id}`, 14, 26);
+    doc.setFontSize(10);
+    doc.text(`Emitido em: ${agora}`, 14, 33);
+
+    doc.setFontSize(11);
+    doc.text(`Título: ${os.titulo}`, 14, 43);
+    doc.text(`Cliente: ${os.pessoa?.nome || '-'}`, 14, 51);
+    doc.text(`Técnico: ${os.tecnico || '-'}`, 14, 59);
+    doc.text(`Status: ${os.status}`, 14, 67);
+    doc.text(`Prioridade: ${os.prioridade}`, 100, 67);
+    doc.text(`Data Prevista: ${os.dataPrevista ? dayjs(os.dataPrevista).format('DD/MM/YYYY') : '-'}`, 14, 75);
+    doc.text(`Data Conclusão: ${os.dataConclusao ? dayjs(os.dataConclusao).format('DD/MM/YYYY') : '-'}`, 100, 75);
+
+    if (os.descricao) {
+      doc.text('Descrição do Problema:', 14, 85);
+      const linhas = doc.splitTextToSize(os.descricao, 180);
+      doc.text(linhas, 14, 93);
+    }
+
+    let startY = os.descricao ? 93 + (doc.splitTextToSize(os.descricao, 180).length * 7) : 85;
+
+    if (os.itens?.length > 0) {
+      autoTable(doc, {
+        startY: startY + 5,
+        head: [['Descrição', 'Qtd', 'Valor Unit.', 'Subtotal']],
+        body: os.itens.map(i => [
+          i.descricao,
+          i.quantidade,
+          `R$ ${i.valorUnitario?.toFixed(2)}`,
+          `R$ ${(i.quantidade * i.valorUnitario).toFixed(2)}`
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [22, 119, 255] },
+      });
+      startY = doc.lastAutoTable.finalY + 10;
+    }
+
+    doc.setFontSize(11);
+    if (os.valorEstimado) doc.text(`Valor Estimado: R$ ${os.valorEstimado.toFixed(2)}`, 14, startY);
+    if (os.valorFinal) {
+      doc.setFontSize(13);
+      doc.text(`Valor Final: R$ ${os.valorFinal.toFixed(2)}`, 14, startY + 10);
+    }
+
+    if (os.observacao) {
+      doc.setFontSize(10);
+      doc.text(`Observação: ${os.observacao}`, 14, startY + 20);
+    }
+
+    doc.save(`OS_${os.id}.pdf`);
+  };
+
   const adicionarItem = () => {
     setItens([...itens, { descricao: '', quantidade: 1, valorUnitario: 0 }]);
   };
@@ -144,26 +206,27 @@ const OrdemServico = () => {
     {
       title: 'Ações', key: 'acoes',
       render: (_, record) => (
-        <Space>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => { setOrdemSelecionada(record); setModalDetalhe(true); }}>
-            Ver
-          </Button>
-          {record.status === 'Aberta' && (
-            <Button size="small" onClick={() => mudarStatus(record.id, 'EmAndamento')}>
-              Iniciar
-            </Button>
-          )}
-          {(record.status === 'Aberta' || record.status === 'EmAndamento') && (
-            <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => { setOrdemSelecionada(record); setModalFinalizar(true); }}>
-              Finalizar
-            </Button>
-          )}
-          {record.status !== 'Concluida' && record.status !== 'Cancelada' && (
-            <Popconfirm title="Cancelar ordem?" onConfirm={() => cancelar(record.id)} okText="Sim" cancelText="Não">
-              <Button size="small" danger icon={<CloseOutlined />}>Cancelar</Button>
-            </Popconfirm>
-          )}
-        </Space>
+<Space>
+  <Button size="small" icon={<EyeOutlined />} onClick={() => { setOrdemSelecionada(record); setModalDetalhe(true); }}>
+    Ver
+  </Button>
+  <Button size="small" icon={<PrinterOutlined />} onClick={() => imprimirOS(record)} />
+  {record.status === 'Aberta' && (
+    <Button size="small" onClick={() => mudarStatus(record.id, 'EmAndamento')}>
+      Iniciar
+    </Button>
+  )}
+  {(record.status === 'Aberta' || record.status === 'EmAndamento') && (
+    <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => { setOrdemSelecionada(record); setModalFinalizar(true); }}>
+      Finalizar
+    </Button>
+  )}
+  {record.status !== 'Concluida' && record.status !== 'Cancelada' && (
+    <Popconfirm title="Cancelar ordem?" onConfirm={() => cancelar(record.id)} okText="Sim" cancelText="Não">
+      <Button size="small" danger icon={<CloseOutlined />}>Cancelar</Button>
+    </Popconfirm>
+  )}
+</Space>
       )
     }
   ];
@@ -288,7 +351,10 @@ const OrdemServico = () => {
         title={`OS #${ordemSelecionada?.id} — ${ordemSelecionada?.titulo}`}
         open={modalDetalhe}
         onCancel={() => setModalDetalhe(false)}
-        footer={null}
+        footer={[
+  <Button key="pdf" icon={<PrinterOutlined />} onClick={() => imprimirOS(ordemSelecionada)}>PDF</Button>,
+  <Button key="fechar" onClick={() => setModalDetalhe(false)}>Fechar</Button>
+]}
         width={650}
       >
         {ordemSelecionada && (
