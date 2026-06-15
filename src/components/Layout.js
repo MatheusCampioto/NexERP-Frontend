@@ -1,11 +1,15 @@
-import { Layout, Menu } from 'antd';
+import { useState, useEffect } from 'react';
+import { Layout, Menu, Badge } from 'antd';
 import {
   DashboardOutlined, TeamOutlined, ShoppingOutlined,
   InboxOutlined, FileTextOutlined, DollarOutlined,
-  LogoutOutlined, BarChartOutlined, UserOutlined, ToolOutlined, ShoppingCartOutlined
+  LogoutOutlined, BarChartOutlined, UserOutlined, ToolOutlined, ShoppingCartOutlined, BellOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { listarSolicitacoes } from '../services/comprasService';
+import { listarLancamentos } from '../services/financeiroService';
+import { listarProdutos } from '../services/produtosService';
 
 const { Sider, Content, Header } = Layout;
 
@@ -13,15 +17,43 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { usuario, logout } = useAuth();
+  const [badges, setBadges] = useState({ solicitacoes: 0, contas: 0, estoque: 0 });
+
+  useEffect(() => {
+    const carregarAlertas = async () => {
+      try {
+        const [solicitacoes, lancamentos, produtos] = await Promise.all([
+          listarSolicitacoes(),
+          listarLancamentos(),
+          listarProdutos(),
+        ]);
+
+        const hoje = new Date();
+        const em3Dias = new Date(hoje.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+        const solicitacoesPendentes = solicitacoes.filter(s => s.status === 'Pendente').length;
+        const contasVencendo = lancamentos.filter(l =>
+          l.status === 'Pendente' && new Date(l.dataVencimento) <= em3Dias && new Date(l.dataVencimento) >= hoje
+        ).length;
+        const estoqueBaixo = produtos.filter(p => p.estoqueAtual <= p.estoqueMinimo).length;
+
+        setBadges({ solicitacoes: solicitacoesPendentes, contas: contasVencendo, estoque: estoqueBaixo });
+      } catch { }
+    };
+
+    carregarAlertas();
+    const interval = setInterval(carregarAlertas, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const menuItems = [
     { key: '/', icon: <DashboardOutlined />, label: 'Painel' },
     { key: '/pessoas', icon: <TeamOutlined />, label: 'Pessoas' },
-    { key: '/produtos', icon: <ShoppingOutlined />, label: 'Produtos' },
-    { key: '/estoque', icon: <InboxOutlined />, label: 'Estoque' },
+    { key: '/produtos', icon: <ShoppingOutlined />, label: <span style={{ color: 'white' }}>Produtos {badges.estoque > 0 && <Badge count={badges.estoque} size="small" style={{ marginLeft: 4 }} />}</span> },
+    { key: '/estoque', icon: <InboxOutlined />, label: <span style={{ color: 'white' }}>Estoque {badges.estoque > 0 && <Badge count={badges.estoque} size="small" style={{ marginLeft: 4 }} />}</span> },
     { key: '/pedidos', icon: <FileTextOutlined />, label: 'Pedidos' },
-    { key: '/compras', icon: <ShoppingCartOutlined />, label: 'Compras' },
-    { key: '/financeiro', icon: <DollarOutlined />, label: 'Financeiro' },
+    { key: '/compras', icon: <ShoppingCartOutlined />, label: <span style={{ color: 'white' }}>Compras {badges.solicitacoes > 0 && <Badge count={badges.solicitacoes} size="small" style={{ marginLeft: 4 }} />}</span> },
+    { key: '/financeiro', icon: <DollarOutlined />, label: <span style={{ color: 'white' }}>Financeiro {badges.contas > 0 && <Badge count={badges.contas} size="small" style={{ marginLeft: 4 }} />}</span> },
     { key: '/ordemservico', icon: <ToolOutlined />, label: 'Ordem de Serviço' },
     { key: '/relatorios', icon: <BarChartOutlined />, label: 'Relatórios' },
     { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários' },
@@ -38,6 +70,8 @@ const AppLayout = () => {
     }
   };
 
+  const totalAlertas = badges.solicitacoes + badges.contas + badges.estoque;
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider theme="dark" breakpoint="lg" collapsedWidth="0">
@@ -53,7 +87,10 @@ const AppLayout = () => {
         />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 16 }}>
+          <Badge count={totalAlertas} size="small">
+            <BellOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
+          </Badge>
           <span style={{ cursor: 'pointer' }} onClick={() => navigate('/perfil')}>
             Olá, {usuario?.nome}
           </span>

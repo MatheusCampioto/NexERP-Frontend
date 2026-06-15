@@ -6,7 +6,8 @@ import { listarLancamentos } from '../services/financeiroService';
 import { listarProdutos } from '../services/produtosService';
 import { listarPessoas } from '../services/pessoasService';
 import { listarOrdensServico } from '../services/ordemServicoService';
-import { listarSolicitacoes, listarOrdensCompra, listarNotasFiscais } from '../services/comprasService';
+import { listarOrdensCompra, listarNotasFiscais } from '../services/comprasService';
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
