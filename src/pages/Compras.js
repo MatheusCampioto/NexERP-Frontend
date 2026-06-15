@@ -10,6 +10,10 @@ import {
 import { listarPessoas } from '../services/pessoasService';
 import { listarProdutos } from '../services/produtosService';
 import dayjs from 'dayjs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { PrinterOutlined } from '@ant-design/icons';
+
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -245,6 +249,49 @@ const Compras = () => {
       </Button>
     </>
   );
+const imprimirOrdemCompra = (oc) => {
+    const doc = new jsPDF();
+    const agora = dayjs().format('DD/MM/YYYY HH:mm');
+
+    doc.setFontSize(18);
+    doc.text('NexERP', 14, 16);
+    doc.setFontSize(14);
+    doc.text(`Ordem de Compra #${oc.id}`, 14, 26);
+    doc.setFontSize(10);
+    doc.text(`Emitido em: ${agora}`, 14, 33);
+
+    doc.setFontSize(11);
+    doc.text(`Fornecedor: ${oc.fornecedor?.razaoSocial || oc.fornecedor?.nome || '-'}`, 14, 43);
+    doc.text(`Status: ${oc.status}`, 14, 51);
+    doc.text(`Condição de Pagamento: ${oc.condicaoPagamento?.nome || '-'}`, 14, 59);
+    doc.text(`Previsão de Entrega: ${oc.dataPrevista ? dayjs(oc.dataPrevista).format('DD/MM/YYYY') : '-'}`, 14, 67);
+
+    if (oc.itens?.length > 0) {
+      autoTable(doc, {
+        startY: 75,
+        head: [['Descrição', 'Qtd', 'Valor Unit.', 'Subtotal']],
+        body: oc.itens.map(i => [
+          i.descricao,
+          i.quantidade,
+          `R$ ${i.valorUnitario?.toFixed(2)}`,
+          `R$ ${(i.quantidade * i.valorUnitario).toFixed(2)}`
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [22, 119, 255] },
+      });
+    }
+
+    const finalY = doc.lastAutoTable?.finalY || 85;
+    doc.setFontSize(13);
+    doc.text(`Valor Total: R$ ${oc.valorTotal?.toFixed(2)}`, 14, finalY + 10);
+
+    if (oc.observacao) {
+      doc.setFontSize(10);
+      doc.text(`Observação: ${oc.observacao}`, 14, finalY + 20);
+    }
+
+    doc.save(`OC_${oc.id}.pdf`);
+  };
 
   const colunasSolicitacao = [
     { title: '#', dataIndex: 'id', key: 'id', width: 60 },
@@ -278,21 +325,22 @@ const Compras = () => {
     { title: 'Status', dataIndex: 'status', key: 'status', render: s => <Tag color={statusCorOrdem[s]}>{s}</Tag> },
     { title: 'Prev. Entrega', dataIndex: 'dataPrevista', key: 'dataPrevista', render: d => d ? dayjs(d).format('DD/MM/YYYY') : '-' },
     {
-      title: 'Ações', key: 'acoes',
-      render: (_, r) => (
-        <Space>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => { setItemSelecionado(r); setModalDetalhe(true); }}>Ver</Button>
-          {r.status === 'Aberta' && (
-            <Button size="small" onClick={() => atualizarStatusOrdem(r.id, 'Enviada').then(carregar)}>Marcar Enviada</Button>
-          )}
-          {r.status !== 'Recebida' && r.status !== 'Cancelada' && (
-            <Popconfirm title="Cancelar?" onConfirm={() => cancelarOrdemCompra(r.id).then(carregar)} okText="Sim" cancelText="Não">
-              <Button size="small" danger icon={<CloseOutlined />}>Cancelar</Button>
-            </Popconfirm>
-          )}
-        </Space>
-      )
-    }
+  title: 'Ações', key: 'acoes',
+  render: (_, r) => (
+    <Space>
+      <Button size="small" icon={<EyeOutlined />} onClick={() => { setItemSelecionado(r); setModalDetalhe(true); }}>Ver</Button>
+      <Button size="small" icon={<PrinterOutlined />} onClick={() => imprimirOrdemCompra(r)} />
+      {r.status === 'Aberta' && (
+        <Button size="small" onClick={() => atualizarStatusOrdem(r.id, 'Enviada').then(carregar)}>Marcar Enviada</Button>
+      )}
+      {r.status !== 'Recebida' && r.status !== 'Cancelada' && (
+        <Popconfirm title="Cancelar?" onConfirm={() => cancelarOrdemCompra(r.id).then(carregar)} okText="Sim" cancelText="Não">
+          <Button size="small" danger icon={<CloseOutlined />}>Cancelar</Button>
+        </Popconfirm>
+      )}
+    </Space>
+  )
+}
   ];
 
   const colunasNF = [
