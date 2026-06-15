@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { Table, Button, Modal, Form, Select, Input, InputNumber, message, Tag, Space, Divider, Card, Row, Col, Statistic } from 'antd';
+import { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Select, Input, InputNumber, message, Tag, Space, Divider, Card, Row, Col, Statistic, DatePicker } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, PrinterOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import { listarPedidos, criarPedido, confirmarPedido, cancelarPedido } from '../services/pedidosService';
+import { listarPedidos, criarPedido } from '../services/pedidosService';
 import { listarPessoas } from '../services/pessoasService';
 import { listarProdutos } from '../services/produtosService';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 const statusCor = { Orcamento: 'orange', Pedido: 'blue', Confirmado: 'green', Cancelado: 'red' };
 const statusLabel = { Orcamento: 'Orçamento', Pedido: 'Pedido', Confirmado: 'Confirmado', Cancelado: 'Cancelado' };
@@ -19,6 +20,9 @@ const Pedidos = () => {
   const [loading, setLoading] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [pedidoDetalhe, setPedidoDetalhe] = useState(null);
+  const [filtroStatus, setFiltroStatus] = useState(null);
+  const [filtroCliente, setFiltroCliente] = useState('');
+  const [filtroPeriodo, setFiltroPeriodo] = useState(null);
   const [form] = Form.useForm();
   const itensWatch = Form.useWatch('itens', form);
 
@@ -37,6 +41,16 @@ const Pedidos = () => {
   };
 
   useEffect(() => { carregar(); }, []);
+
+  const pedidosFiltrados = pedidos.filter(p => {
+    if (filtroStatus && p.status !== filtroStatus) return false;
+    if (filtroCliente && !p.pessoa?.nome?.toLowerCase().includes(filtroCliente.toLowerCase())) return false;
+    if (filtroPeriodo) {
+      const data = new Date(p.criadoEm);
+      if (data < filtroPeriodo[0].toDate() || data > filtroPeriodo[1].toDate()) return false;
+    }
+    return true;
+  });
 
   const calcularTotal = () => {
     if (!itensWatch) return 0;
@@ -169,7 +183,57 @@ const Pedidos = () => {
         </Button>
       </div>
 
-      <Table dataSource={pedidos} columns={colunas} rowKey="id" loading={loading} />
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={6}>
+          <Input
+            placeholder="Buscar por cliente..."
+            value={filtroCliente}
+            onChange={e => setFiltroCliente(e.target.value)}
+            allowClear
+          />
+        </Col>
+        <Col span={6}>
+          <Select placeholder="Filtrar por status" style={{ width: '100%' }} allowClear onChange={setFiltroStatus}>
+            <Option value="Orcamento">Orçamento</Option>
+            <Option value="Pedido">Pedido</Option>
+            <Option value="Confirmado">Confirmado</Option>
+            <Option value="Cancelado">Cancelado</Option>
+          </Select>
+        </Col>
+        <Col span={8}>
+          <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" onChange={setFiltroPeriodo} />
+        </Col>
+        <Col span={4}>
+          <Button onClick={() => { setFiltroStatus(null); setFiltroCliente(''); setFiltroPeriodo(null); }} block>
+            Limpar
+          </Button>
+        </Col>
+      </Row>
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={6}>
+          <Card size="small">
+            <Statistic title="Total" value={pedidosFiltrados.length} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Statistic title="Confirmados" value={pedidosFiltrados.filter(p => p.status === 'Confirmado').length} valueStyle={{ color: 'green' }} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Statistic title="Pendentes" value={pedidosFiltrados.filter(p => p.status === 'Pedido' || p.status === 'Orcamento').length} valueStyle={{ color: '#fa8c16' }} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Statistic title="Valor Total" value={pedidosFiltrados.reduce((acc, p) => acc + (p.valorTotal - p.desconto), 0)} precision={2} prefix="R$" />
+          </Card>
+        </Col>
+      </Row>
+
+      <Table dataSource={pedidosFiltrados} columns={colunas} rowKey="id" loading={loading} />
 
       {/* Modal detalhe do pedido */}
       <Modal
@@ -237,7 +301,7 @@ const Pedidos = () => {
             <Col span={12}>
               <Form.Item name="pessoaId" label="Cliente" rules={[{ required: true, message: 'Selecione o cliente' }]}>
                 <Select placeholder="Selecione o cliente" showSearch optionFilterProp="children">
-                  {pessoas.map(p => <Option key={p.id} value={p.id}>{p.nome}</Option>)}
+                  {pessoas.map(p => <Option key={p.id} value={p.id}>{p.nome || p.razaoSocial}</Option>)}
                 </Select>
               </Form.Item>
             </Col>
