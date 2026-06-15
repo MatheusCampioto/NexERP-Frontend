@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, Select, message, Popconfirm, Space, Tag, Tabs, Row, Col, DatePicker } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, HistoryOutlined } from '@ant-design/icons';
 import { listarPessoas, criarPessoa, atualizarPessoa, desativarPessoa } from '../services/pessoasService';
 import { validarCPF, validarCNPJ, formatarCPF, formatarCNPJ } from '../utils/validacoes';
+import { listarPedidos } from '../services/pedidosService';
+import { listarOrdensServico } from '../services/ordemServicoService';
+import { listarOrdensCompra } from '../services/comprasService';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -16,6 +19,10 @@ const Pessoas = () => {
   const [pessoaEditando, setPessoaEditando] = useState(null);
   const [tipoDocumento, setTipoDocumento] = useState('CPF');
   const [busca, setBusca] = useState('');
+  const [modalHistorico, setModalHistorico] = useState(false);
+  const [pessoaHistorico, setPessoaHistorico] = useState(null);
+  const [historico, setHistorico] = useState({ pedidos: [], ordens: [], compras: [] });
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [form] = Form.useForm();
 
   const buscarCep = async (cep) => {
@@ -114,6 +121,28 @@ const Pessoas = () => {
     }
   };
 
+  const abrirHistorico = async (pessoa) => {
+    setPessoaHistorico(pessoa);
+    setModalHistorico(true);
+    setLoadingHistorico(true);
+    try {
+      const [pedidos, ordens, compras] = await Promise.all([
+        listarPedidos(),
+        listarOrdensServico(),
+        listarOrdensCompra(),
+      ]);
+      setHistorico({
+        pedidos: pedidos.filter(p => p.pessoaId === pessoa.id),
+        ordens: ordens.filter(o => o.pessoaId === pessoa.id),
+        compras: compras.filter(c => c.fornecedorId === pessoa.id),
+      });
+    } catch {
+      message.error('Erro ao carregar histórico.');
+    } finally {
+      setLoadingHistorico(false);
+    }
+  };
+
   const colunas = [
     {
       title: 'Nome / Razão Social', key: 'nome',
@@ -139,6 +168,7 @@ const Pessoas = () => {
       title: 'Ações', key: 'acoes',
       render: (_, record) => (
         <Space>
+          <Button icon={<HistoryOutlined />} size="small" onClick={() => abrirHistorico(record)}>Histórico</Button>
           <Button icon={<EditOutlined />} size="small" onClick={() => abrirModal(record)} />
           <Popconfirm title="Desativar?" onConfirm={() => desativar(record.id)} okText="Sim" cancelText="Não">
             <Button icon={<DeleteOutlined />} size="small" danger />
@@ -168,6 +198,77 @@ const Pessoas = () => {
 
       <Table dataSource={filtradas} columns={colunas} rowKey="id" loading={loading} />
 
+      {/* Modal Histórico */}
+      <Modal
+        title={`Histórico — ${pessoaHistorico?.razaoSocial || pessoaHistorico?.nome}`}
+        open={modalHistorico}
+        onCancel={() => setModalHistorico(false)}
+        footer={null}
+        width={750}
+      >
+        <Tabs items={[
+          {
+            key: 'pedidos',
+            label: `Pedidos (${historico.pedidos.length})`,
+            children: (
+              <Table
+                dataSource={historico.pedidos}
+                rowKey="id"
+                loading={loadingHistorico}
+                size="small"
+                pagination={{ pageSize: 5 }}
+                columns={[
+                  { title: '#', dataIndex: 'id', key: 'id', width: 60 },
+                  { title: 'Status', dataIndex: 'status', key: 'status', render: s => <Tag>{s}</Tag> },
+                  { title: 'Total', dataIndex: 'valorTotal', key: 'valorTotal', render: v => `R$ ${v?.toFixed(2)}` },
+                  { title: 'Data', dataIndex: 'criadoEm', key: 'criadoEm', render: d => dayjs(d).format('DD/MM/YYYY') },
+                ]}
+              />
+            )
+          },
+          {
+            key: 'ordens',
+            label: `Ordens de Serviço (${historico.ordens.length})`,
+            children: (
+              <Table
+                dataSource={historico.ordens}
+                rowKey="id"
+                loading={loadingHistorico}
+                size="small"
+                pagination={{ pageSize: 5 }}
+                columns={[
+                  { title: '#', dataIndex: 'id', key: 'id', width: 60 },
+                  { title: 'Título', dataIndex: 'titulo', key: 'titulo' },
+                  { title: 'Status', dataIndex: 'status', key: 'status', render: s => <Tag>{s}</Tag> },
+                  { title: 'Valor Final', dataIndex: 'valorFinal', key: 'valorFinal', render: v => v ? `R$ ${v?.toFixed(2)}` : '-' },
+                  { title: 'Data', dataIndex: 'criadoEm', key: 'criadoEm', render: d => dayjs(d).format('DD/MM/YYYY') },
+                ]}
+              />
+            )
+          },
+          {
+            key: 'compras',
+            label: `Compras (${historico.compras.length})`,
+            children: (
+              <Table
+                dataSource={historico.compras}
+                rowKey="id"
+                loading={loadingHistorico}
+                size="small"
+                pagination={{ pageSize: 5 }}
+                columns={[
+                  { title: '#', dataIndex: 'id', key: 'id', width: 60 },
+                  { title: 'Status', dataIndex: 'status', key: 'status', render: s => <Tag>{s}</Tag> },
+                  { title: 'Valor Total', dataIndex: 'valorTotal', key: 'valorTotal', render: v => `R$ ${v?.toFixed(2)}` },
+                  { title: 'Data', dataIndex: 'criadoEm', key: 'criadoEm', render: d => dayjs(d).format('DD/MM/YYYY') },
+                ]}
+              />
+            )
+          },
+        ]} />
+      </Modal>
+
+      {/* Modal Cadastro */}
       <Modal
         title={pessoaEditando ? 'Editar Pessoa' : 'Nova Pessoa'}
         open={modalAberto}
