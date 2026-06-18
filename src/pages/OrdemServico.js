@@ -438,40 +438,73 @@ const OrdemServico = () => {
   </Form>
 </Modal>
 
-      {/* Modal Detalhe */}
-      <Modal
-        title={`OS #${ordemSelecionada?.id} — ${ordemSelecionada?.titulo}`}
-        open={modalDetalhe}
-        onCancel={() => setModalDetalhe(false)}
-        footer={[
-          <Button key="pdf" icon={<PrinterOutlined />} onClick={() => imprimirOS(ordemSelecionada)}>PDF</Button>,
-          <Button key="fechar" onClick={() => setModalDetalhe(false)}>Fechar</Button>
-        ]}
-        width={650}
-      >
-        {ordemSelecionada && (
+     {/* Modal Detalhe */}
+<Modal
+  title={`OS #${ordemSelecionada?.id} — ${ordemSelecionada?.titulo}`}
+  open={modalDetalhe}
+  onCancel={() => setModalDetalhe(false)}
+  footer={[
+    <Button key="pdf" icon={<PrinterOutlined />} onClick={() => imprimirOS(ordemSelecionada)}>PDF</Button>,
+    <Button key="fechar" onClick={() => setModalDetalhe(false)}>Fechar</Button>
+  ]}
+  width={750}
+>
+  {ordemSelecionada && (
+    <Tabs items={[
+      {
+        key: 'geral',
+        label: 'Geral',
+        children: (
           <>
             <Row gutter={16}>
-              <Col span={12}><b>Cliente:</b> {ordemSelecionada.pessoa?.nome}</Col>
-              <Col span={12}><b>Técnico:</b> {ordemSelecionada.tecnico || '-'}</Col>
-            </Row>
-            <Row gutter={16} style={{ marginTop: 8 }}>
-              <Col span={12}><b>Status:</b> <Tag color={statusCor[ordemSelecionada.status]}>{ordemSelecionada.status}</Tag></Col>
+              <Col span={12}><b>Tipo de OS:</b> {ordemSelecionada.tipoOS || '-'}</Col>
               <Col span={12}><b>Prioridade:</b> <Tag color={prioridadeCor[ordemSelecionada.prioridade]}>{ordemSelecionada.prioridade}</Tag></Col>
             </Row>
             <Row gutter={16} style={{ marginTop: 8 }}>
-              <Col span={12}><b>Valor Estimado:</b> {ordemSelecionada.valorEstimado ? `R$ ${ordemSelecionada.valorEstimado.toFixed(2)}` : '-'}</Col>
-              <Col span={12}><b>Valor Final:</b> {ordemSelecionada.valorFinal ? `R$ ${ordemSelecionada.valorFinal.toFixed(2)}` : '-'}</Col>
+              <Col span={12}><b>Status:</b> <Tag color={statusCor[ordemSelecionada.status]}>{ordemSelecionada.status}</Tag></Col>
+              <Col span={12}><b>Técnico:</b> {ordemSelecionada.tecnico || '-'}</Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><b>Cliente:</b> {ordemSelecionada.pessoa?.nome || '-'}</Col>
+              <Col span={12}><b>Contato:</b> {ordemSelecionada.contatoResponsavel || '-'}</Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><b>Telefone Contato:</b> {ordemSelecionada.telefoneContato || '-'}</Col>
+              <Col span={12}><b>Garantia:</b> {ordemSelecionada.garantiaDias ? `${ordemSelecionada.garantiaDias} dias` : '-'}</Col>
             </Row>
             <Row gutter={16} style={{ marginTop: 8 }}>
               <Col span={12}><b>Data Prevista:</b> {ordemSelecionada.dataPrevista ? dayjs(ordemSelecionada.dataPrevista).format('DD/MM/YYYY') : '-'}</Col>
               <Col span={12}><b>Data Conclusão:</b> {ordemSelecionada.dataConclusao ? dayjs(ordemSelecionada.dataConclusao).format('DD/MM/YYYY') : '-'}</Col>
             </Row>
-            {ordemSelecionada.descricao && <><Divider /><b>Descrição:</b><p>{ordemSelecionada.descricao}</p></>}
-            {ordemSelecionada.observacao && <><b>Observação:</b><p>{ordemSelecionada.observacao}</p></>}
-            {ordemSelecionada.itens?.length > 0 && (
+            {ordemSelecionada.descricao && (
+              <><Divider /><b>Descrição do Problema:</b><p>{ordemSelecionada.descricao}</p></>
+            )}
+          </>
+        )
+      },
+      {
+        key: 'equipamento',
+        label: 'Equipamento',
+        children: (
+          <>
+            <Row gutter={16}>
+              <Col span={12}><b>Descrição:</b> {ordemSelecionada.equipamentoDescricao || '-'}</Col>
+              <Col span={12}><b>Marca:</b> {ordemSelecionada.equipamentoMarca || '-'}</Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><b>Modelo:</b> {ordemSelecionada.equipamentoModelo || '-'}</Col>
+              <Col span={12}><b>Número de Série:</b> {ordemSelecionada.equipamentoNumeroSerie || '-'}</Col>
+            </Row>
+          </>
+        )
+      },
+      {
+        key: 'itens',
+        label: 'Itens / Serviços',
+        children: (
+          <>
+            {ordemSelecionada.itens?.length > 0 ? (
               <>
-                <Divider>Itens</Divider>
                 <Table
                   dataSource={ordemSelecionada.itens}
                   rowKey="id"
@@ -480,15 +513,53 @@ const OrdemServico = () => {
                   columns={[
                     { title: 'Descrição', dataIndex: 'descricao', key: 'descricao' },
                     { title: 'Qtd', dataIndex: 'quantidade', key: 'quantidade' },
-                    { title: 'Valor Unit.', dataIndex: 'valorUnitario', key: 'valorUnitario', render: v => `R$ ${v.toFixed(2)}` },
-                    { title: 'Subtotal', key: 'subtotal', render: (_, r) => `R$ ${(r.quantidade * r.valorUnitario).toFixed(2)}` },
+                    { title: 'UN', dataIndex: 'unidade', key: 'unidade', render: v => v || '-' },
+                    { title: 'Valor Unit.', dataIndex: 'valorUnitario', key: 'valorUnitario', render: v => `R$ ${v?.toFixed(2)}` },
+                    { title: 'CFOP', dataIndex: 'cfop', key: 'cfop', render: v => v || '-' },
+                    { title: 'Subtotal', key: 'subtotal', render: (_, r) => `R$ ${((r.quantidade || 0) * (r.valorUnitario || 0)).toFixed(2)}` },
                   ]}
                 />
+                <Divider />
+                <Row justify="end">
+                  <Col><b>Total: R$ {ordemSelecionada.itens.reduce((acc, i) => acc + ((i.quantidade || 0) * (i.valorUnitario || 0)), 0).toFixed(2)}</b></Col>
+                </Row>
               </>
-            )}
+            ) : <p>Nenhum item cadastrado.</p>}
           </>
-        )}
-      </Modal>
+        )
+      },
+      {
+        key: 'financeiro',
+        label: 'Financeiro',
+        children: (
+          <>
+            <Row gutter={16}>
+              <Col span={8}><b>Valor Estimado:</b> {ordemSelecionada.valorEstimado ? `R$ ${ordemSelecionada.valorEstimado.toFixed(2)}` : '-'}</Col>
+              <Col span={8}><b>Valor Final:</b> {ordemSelecionada.valorFinal ? `R$ ${ordemSelecionada.valorFinal.toFixed(2)}` : '-'}</Col>
+              <Col span={8}><b>Forma Pgto:</b> {ordemSelecionada.formaPagamento || '-'}</Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}><b>Condição:</b> {ordemSelecionada.condicaoPagamento || '-'}</Col>
+            </Row>
+          </>
+        )
+      },
+      {
+        key: 'observacoes',
+        label: 'Observações',
+        children: (
+          <>
+            <b>Observação para o Cliente:</b>
+            <p>{ordemSelecionada.observacao || '-'}</p>
+            <Divider />
+            <b>Observação Interna:</b>
+            <p>{ordemSelecionada.observacaoInterna || '-'}</p>
+          </>
+        )
+      }
+    ]} />
+  )}
+</Modal>
 
       {/* Modal Finalizar */}
       <Modal title="Finalizar Ordem de Serviço" open={modalFinalizar}
