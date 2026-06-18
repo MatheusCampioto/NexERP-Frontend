@@ -25,6 +25,10 @@ const Pedidos = () => {
   const [filtroPeriodo, setFiltroPeriodo] = useState(null);
   const [form] = Form.useForm();
   const itensWatch = Form.useWatch('itens', form);
+// eslint-disable-next-line no-unused-vars
+const [transportadoras, setTransportadoras] = useState([]);
+// eslint-disable-next-line no-unused-vars
+const [tipoPedidos, setTipoPedidos] = useState([]);
 
   const carregar = async () => {
     setLoading(true);
@@ -322,102 +326,255 @@ const Pedidos = () => {
       </Modal>
 
       {/* Modal novo pedido */}
-      <Modal
-        title="Novo Orçamento"
-        open={modalAberto}
-        onCancel={() => { setModalAberto(false); form.resetFields(); }}
-        onOk={() => form.submit()}
-        okText="Salvar"
-        cancelText="Cancelar"
-        width={750}
-      >
-        <Form form={form} layout="vertical" onFinish={salvar}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="pessoaId" label="Cliente" rules={[{ required: true, message: 'Selecione o cliente' }]}>
-                <Select placeholder="Selecione o cliente" showSearch optionFilterProp="children">
-                  {pessoas.map(p => <Option key={p.id} value={p.id}>{p.nome || p.razaoSocial}</Option>)}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="formaPagamento" label="Forma de Pagamento">
-                <Select placeholder="Selecione" allowClear>
-                  <Option value="Dinheiro">Dinheiro</Option>
-                  <Option value="Cartão de Crédito">Cartão de Crédito</Option>
-                  <Option value="Cartão de Débito">Cartão de Débito</Option>
-                  <Option value="Pix">Pix</Option>
-                  <Option value="Boleto">Boleto</Option>
-                  <Option value="Transferência">Transferência</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="condicaoPagamento" label="Condição de Pagamento">
-                <Select placeholder="Selecione" allowClear>
-                  <Option value="À Vista">À Vista</Option>
-                  <Option value="30 dias">30 dias</Option>
-                  <Option value="30/60 dias">30/60 dias</Option>
-                  <Option value="30/60/90 dias">30/60/90 dias</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="desconto" label="Desconto Geral (R$)">
-                <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item name="observacao" label="Observação">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Divider>Itens</Divider>
-
-          <Form.List name="itens" rules={[{ validator: async (_, itens) => { if (!itens || itens.length < 1) return Promise.reject('Adicione pelo menos um item.'); } }]}>
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name }) => (
-                  <Row key={key} gutter={8} align="middle">
-                    <Col span={10}>
-                      <Form.Item name={[name, 'produtoId']} rules={[{ required: true, message: 'Selecione' }]}>
-                        <Select placeholder="Produto" showSearch optionFilterProp="children">
-                          {produtos.map(p => <Option key={p.id} value={p.id}>{p.nome} — R$ {p.precoVenda?.toFixed(2)}</Option>)}
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={5}>
-                      <Form.Item name={[name, 'quantidade']} rules={[{ required: true, message: 'Qtd' }]}>
-                        <InputNumber min={1} placeholder="Qtd" style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={6}>
-                      <Form.Item name={[name, 'desconto']}>
-                        <InputNumber min={0} precision={2} placeholder="Desconto R$" style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={3}>
-                      <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red', fontSize: 18 }} />
-                    </Col>
-                  </Row>
-                ))}
-                <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />} block>
-                  Adicionar Item
-                </Button>
-              </>
-            )}
-          </Form.List>
-
-          <Divider />
-          <Row justify="end">
-            <Col>
-              <b>Total Estimado: R$ {calcularTotal().toFixed(2)}</b>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
+      {/* Modal novo pedido */}
+<Modal
+  title="Novo Orçamento"
+  open={modalAberto}
+  onCancel={() => { setModalAberto(false); form.resetFields(); }}
+  onOk={() => form.submit()}
+  okText="Salvar"
+  cancelText="Cancelar"
+  width={900}
+>
+  <Form form={form} layout="vertical" onFinish={salvar}>
+    <Tabs items={[
+      {
+        key: 'geral',
+        label: 'Geral',
+        children: (
+          <>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="pessoaId" label="Cliente" rules={[{ required: true, message: 'Selecione o cliente' }]}>
+                  <Select placeholder="Selecione o cliente" showSearch optionFilterProp="children">
+                    {pessoas.map(p => <Option key={p.id} value={p.id}>{p.nome || p.razaoSocial}</Option>)}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="representanteId" label="Representante / Vendedor">
+                  <Select placeholder="Selecione" allowClear showSearch optionFilterProp="children">
+                    {pessoas.filter(p => p.tipo === 'Representante').map(p => <Option key={p.id} value={p.id}>{p.nome || p.razaoSocial}</Option>)}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="tipoPedido" label="Tipo de Pedido">
+                  <Select placeholder="Selecione" allowClear>
+                    {tipoPedidos.map(t => <Option key={t.id} value={t.tipo}>{t.tipo}</Option>)}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="tabelaPreco" label="Tabela de Preço">
+                  <Input placeholder="Tabela padrão" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="filial" label="Filial">
+                  <Input placeholder="Filial" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="formaPagamento" label="Forma de Pagamento">
+                  <Select placeholder="Selecione" allowClear>
+                    <Option value="Dinheiro">Dinheiro</Option>
+                    <Option value="Cartão de Crédito">Cartão de Crédito</Option>
+                    <Option value="Cartão de Débito">Cartão de Débito</Option>
+                    <Option value="Pix">Pix</Option>
+                    <Option value="Boleto">Boleto</Option>
+                    <Option value="Transferência">Transferência</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="condicaoPagamento" label="Condição de Pagamento">
+                  <Select placeholder="Selecione" allowClear>
+                    <Option value="À Vista">À Vista</Option>
+                    <Option value="30 dias">30 dias</Option>
+                    <Option value="30/60 dias">30/60 dias</Option>
+                    <Option value="30/60/90 dias">30/60/90 dias</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="dataEntregaPrevista" label="Previsão de Entrega">
+                  <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="transportadoraId" label="Transportadora">
+                  <Select placeholder="Selecione" allowClear showSearch optionFilterProp="children">
+                    {transportadoras.map(t => <Option key={t.id} value={t.id}>{t.razaoSocial || t.nome}</Option>)}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="frete" label="Valor do Frete (R$)">
+                  <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </>
+        )
+      },
+      {
+        key: 'itens',
+        label: 'Itens',
+        children: (
+          <>
+            <Form.List name="itens" rules={[{ validator: async (_, itens) => { if (!itens || itens.length < 1) return Promise.reject('Adicione pelo menos um item.'); } }]}>
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name }) => (
+                    <Row key={key} gutter={8} align="middle" style={{ marginBottom: 4 }}>
+                      <Col span={7}>
+                        <Form.Item name={[name, 'produtoId']} rules={[{ required: true, message: 'Selecione' }]} style={{ marginBottom: 0 }}>
+                          <Select
+                            placeholder="Produto"
+                            showSearch
+                            optionFilterProp="children"
+                            onChange={(val) => {
+                              const produto = produtos.find(p => p.id === val);
+                              if (produto) {
+                                const itensAtual = form.getFieldValue('itens');
+                                itensAtual[name].precoUnitario = produto.precoVenda;
+                                itensAtual[name].unidade = produto.unidade;
+                                form.setFieldsValue({ itens: itensAtual });
+                              }
+                            }}
+                          >
+                            {produtos.map(p => <Option key={p.id} value={p.id}>{p.nome}</Option>)}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={3}>
+                        <Form.Item name={[name, 'quantidade']} rules={[{ required: true, message: 'Qtd' }]} style={{ marginBottom: 0 }}>
+                          <InputNumber min={1} placeholder="Qtd" style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={2}>
+                        <Form.Item name={[name, 'unidade']} style={{ marginBottom: 0 }}>
+                          <Input placeholder="UN" maxLength={5} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={4}>
+                        <Form.Item name={[name, 'precoUnitario']} style={{ marginBottom: 0 }}>
+                          <InputNumber min={0} precision={2} placeholder="Preço Unit." prefix="R$" style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={3}>
+                        <Form.Item name={[name, 'descontoPct']} style={{ marginBottom: 0 }}>
+                          <InputNumber min={0} max={100} precision={2} placeholder="Desc%" suffix="%" style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={3}>
+                        <Form.Item name={[name, 'desconto']} style={{ marginBottom: 0 }}>
+                          <InputNumber min={0} precision={2} placeholder="Desc R$" style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={2}>
+                        <MinusCircleOutlined onClick={() => remove(name)} style={{ color: 'red', fontSize: 18 }} />
+                      </Col>
+                    </Row>
+                  ))}
+                  <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />} block style={{ marginTop: 8 }}>
+                    Adicionar Item
+                  </Button>
+                </>
+              )}
+            </Form.List>
+            <Divider />
+            <Row justify="end" gutter={16}>
+              <Col>
+                <b>Subtotal: R$ {calcularTotal().toFixed(2)}</b>
+              </Col>
+            </Row>
+          </>
+        )
+      },
+      {
+        key: 'totais',
+        label: 'Totais e Desconto',
+        children: (
+          <>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="desconto" label="Desconto Geral (R$)">
+                  <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="frete" label="Frete (R$)">
+                  <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="outrasDespesas" label="Outras Despesas (R$)">
+                  <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Divider />
+            <Row gutter={16}>
+              <Col span={8}><Card size="small"><Statistic title="Subtotal" value={calcularTotal()} precision={2} prefix="R$" /></Card></Col>
+              <Col span={8}><Card size="small"><Statistic title="Desconto" value={form.getFieldValue('desconto') || 0} precision={2} prefix="R$" valueStyle={{ color: 'red' }} /></Card></Col>
+              <Col span={8}><Card size="small"><Statistic title="Total Líquido" value={calcularTotal() + (form.getFieldValue('frete') || 0) + (form.getFieldValue('outrasDespesas') || 0)} precision={2} prefix="R$" valueStyle={{ color: 'green' }} /></Card></Col>
+            </Row>
+          </>
+        )
+      },
+      {
+        key: 'fiscal',
+        label: 'Fiscal',
+        children: (
+          <>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="cfop" label="CFOP">
+                  <Input placeholder="5102" maxLength={5} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="naturezaOperacao" label="Natureza da Operação">
+                  <Input placeholder="Venda de mercadoria" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="finalidade" label="Finalidade">
+                  <Select allowClear>
+                    <Option value="Normal">Normal</Option>
+                    <Option value="Complementar">Complementar</Option>
+                    <Option value="Ajuste">Ajuste</Option>
+                    <Option value="Devolução">Devolução</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="observacaoFiscal" label="Observação Fiscal">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          </>
+        )
+      },
+      {
+        key: 'obs',
+        label: 'Observações',
+        children: (
+          <Form.Item name="observacao" label="Observação">
+            <Input.TextArea rows={4} />
+          </Form.Item>
+        )
+      }
+    ]} />
+  </Form>
+</Modal>
     </>
   );
 };
