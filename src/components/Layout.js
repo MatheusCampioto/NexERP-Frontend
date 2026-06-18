@@ -58,6 +58,7 @@ const AppLayout = () => {
         { key: '/compras', label: <span>Compras {badges.solicitacoes > 0 && <Badge count={badges.solicitacoes} size="small" style={{ marginLeft: 4 }} />}</span> },
         { key: '/ordemservico', label: 'Ordem de Serviço' },
         { key: '/faturamento', label: 'Faturamento' },
+        { key: '/tabelapreco', label: 'Tabelas de Preço' },
       ]
     },
     {
@@ -75,7 +76,7 @@ const AppLayout = () => {
       label: 'Gestão de Pessoas',
       children: [
         { key: '/pessoas', label: 'Pessoas' },
-        { key: '/transportadora', label: 'Transportadoras' },
+        
       ]
     },
     {
