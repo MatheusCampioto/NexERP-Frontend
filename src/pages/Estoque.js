@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Tag, Alert, Row, Col, Card, Tabs } from 'antd';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Tag, Alert, Row, Col, Card, Tabs, Statistic } from 'antd';
 import { PlusOutlined, AuditOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { listarProdutos } from '../services/produtosService';
 import { listarMovimentacoes, movimentarEstoque } from '../services/estoqueService';
 import api from '../services/api';
@@ -130,7 +131,7 @@ const Estoque = () => {
     },
   ];
 
-  const tabItems = [
+const tabItems = [
     {
       key: 'produtos',
       label: 'Todos os Produtos',
@@ -153,12 +154,104 @@ const Estoque = () => {
       key: 'baixo',
       label: `Estoque Baixo ${produtosBaixoEstoque.length > 0 ? `(${produtosBaixoEstoque.length})` : ''}`,
       children: (
-        <Table
-          dataSource={produtosBaixoEstoque}
-          columns={colunasProdutos}
-          rowKey="id"
-          loading={loading}
-        />
+        <Table dataSource={produtosBaixoEstoque} columns={colunasProdutos} rowKey="id" loading={loading} />
+      )
+    },
+    {
+      key: 'movimentacoes',
+      label: 'Movimentações',
+      children: (
+        <>
+          <Table
+            dataSource={movimentacoes}
+            rowKey="id"
+            loading={loading}
+            columns={[
+              { title: 'Produto', key: 'produto', render: (_, r) => r.produto?.nome || '-' },
+              {
+                title: 'Tipo', dataIndex: 'tipo', key: 'tipo',
+                render: t => <Tag color={t === 'Entrada' ? 'green' : 'red'}>{t}</Tag>
+              },
+              { title: 'Quantidade', dataIndex: 'quantidade', key: 'quantidade' },
+              { title: 'Observação', dataIndex: 'observacao', key: 'observacao', render: v => v || '-' },
+              { title: 'Data', dataIndex: 'criadoEm', key: 'criadoEm', render: d => dayjs(d).format('DD/MM/YYYY HH:mm') },
+            ]}
+          />
+        </>
+      )
+    },
+    {
+      key: 'validade',
+      label: 'Controle de Validade',
+      children: (
+        <>
+          <Table
+            dataSource={produtos.filter(p => p.controlaValidade)}
+            rowKey="id"
+            loading={loading}
+            locale={{ emptyText: 'Nenhum produto com controle de validade cadastrado.' }}
+            columns={[
+              { title: 'Produto', dataIndex: 'nome', key: 'nome' },
+              { title: 'Código', dataIndex: 'codigo', key: 'codigo' },
+              { title: 'Estoque Atual', dataIndex: 'estoqueAtual', key: 'estoqueAtual' },
+              { title: 'Dias de Validade', dataIndex: 'diasValidade', key: 'diasValidade', render: v => v ? `${v} dias` : '-' },
+              { title: 'Localização', dataIndex: 'localizacaoEstoque', key: 'localizacaoEstoque', render: v => v || '-' },
+            ]}
+          />
+        </>
+      )
+    },
+    {
+      key: 'relatorios',
+      label: 'Relatórios',
+      children: (
+        <Row gutter={16}>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Total de Produtos" value={produtos.length} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Estoque Baixo" value={produtosBaixoEstoque.length} valueStyle={{ color: 'red' }} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic
+                title="Valor Total em Estoque"
+                value={produtos.reduce((acc, p) => acc + ((p.estoqueAtual || 0) * (p.precoCusto || 0)), 0)}
+                precision={2}
+                prefix="R$"
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic
+                title="Produtos sem Estoque"
+                value={produtos.filter(p => p.estoqueAtual === 0).length}
+                valueStyle={{ color: 'red' }}
+              />
+            </Card>
+          </Col>
+          <Col span={24} style={{ marginTop: 16 }}>
+            <Card title="Produtos com Menor Estoque" size="small">
+              <Table
+                dataSource={[...produtos].sort((a, b) => a.estoqueAtual - b.estoqueAtual).slice(0, 10)}
+                rowKey="id"
+                size="small"
+                pagination={false}
+                columns={[
+                  { title: 'Produto', dataIndex: 'nome', key: 'nome' },
+                  { title: 'Estoque Atual', dataIndex: 'estoqueAtual', key: 'estoqueAtual', render: (v, r) => <Tag color={v <= r.estoqueMinimo ? 'red' : 'green'}>{v}</Tag> },
+                  { title: 'Estoque Mínimo', dataIndex: 'estoqueMinimo', key: 'estoqueMinimo' },
+                  { title: 'Valor em Estoque', key: 'valor', render: (_, r) => `R$ ${((r.estoqueAtual || 0) * (r.precoCusto || 0)).toFixed(2)}` },
+                ]}
+              />
+            </Card>
+          </Col>
+        </Row>
       )
     }
   ];
