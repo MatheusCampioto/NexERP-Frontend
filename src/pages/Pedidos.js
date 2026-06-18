@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Select, Input, InputNumber, message, Tag, Space, Divider, Card, Row, Col, Statistic, DatePicker } from 'antd';
+import { Table, Button, Modal, Form, Select, Input, InputNumber, message, Tag, Space, Divider, Card, Row, Col, Statistic, DatePicker, Tabs } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, PrinterOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { listarPedidos, criarPedido } from '../services/pedidosService';
 import { listarPessoas } from '../services/pessoasService';
@@ -149,9 +149,7 @@ const Pedidos = () => {
   const colunas = [
     { title: '#', dataIndex: 'id', key: 'id', width: 60 },
     { title: 'Cliente', dataIndex: ['pessoa', 'nome'], key: 'pessoa' },
-    { title: 'Status', dataIndex: 'status', key: 'status',
-      render: (s) => <Tag color={statusCor[s]}>{statusLabel[s] || s}</Tag>
-    },
+    { title: 'Status', dataIndex: 'status', key: 'status', render: (s) => <Tag color={statusCor[s]}>{statusLabel[s] || s}</Tag> },
     { title: 'Total', dataIndex: 'valorTotal', key: 'valorTotal', render: (v) => `R$ ${v?.toFixed(2)}` },
     { title: 'Forma Pgto', dataIndex: 'formaPagamento', key: 'formaPagamento' },
     { title: 'Data', dataIndex: 'criadoEm', key: 'criadoEm', render: (d) => new Date(d).toLocaleDateString('pt-BR') },
@@ -174,6 +172,93 @@ const Pedidos = () => {
     }
   ];
 
+  const tabItems = [
+    {
+      key: 'pedidos',
+      label: 'Pedidos',
+      children: (
+        <>
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={6}>
+              <Input placeholder="Buscar por cliente..." value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)} allowClear />
+            </Col>
+            <Col span={6}>
+              <Select placeholder="Filtrar por status" style={{ width: '100%' }} allowClear onChange={setFiltroStatus}>
+                <Option value="Orcamento">Orçamento</Option>
+                <Option value="Pedido">Pedido</Option>
+                <Option value="Confirmado">Confirmado</Option>
+                <Option value="Cancelado">Cancelado</Option>
+              </Select>
+            </Col>
+            <Col span={8}>
+              <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" onChange={setFiltroPeriodo} />
+            </Col>
+            <Col span={4}>
+              <Button onClick={() => { setFiltroStatus(null); setFiltroCliente(''); setFiltroPeriodo(null); }} block>Limpar</Button>
+            </Col>
+          </Row>
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={6}><Card size="small"><Statistic title="Total" value={pedidosFiltrados.length} /></Card></Col>
+            <Col span={6}><Card size="small"><Statistic title="Confirmados" value={pedidosFiltrados.filter(p => p.status === 'Confirmado').length} valueStyle={{ color: 'green' }} /></Card></Col>
+            <Col span={6}><Card size="small"><Statistic title="Pendentes" value={pedidosFiltrados.filter(p => p.status === 'Pedido' || p.status === 'Orcamento').length} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
+            <Col span={6}><Card size="small"><Statistic title="Valor Total" value={pedidosFiltrados.reduce((acc, p) => acc + (p.valorTotal - p.desconto), 0)} precision={2} prefix="R$" /></Card></Col>
+          </Row>
+          <Table dataSource={pedidosFiltrados} columns={colunas} rowKey="id" loading={loading} />
+        </>
+      )
+    },
+    {
+      key: 'historico',
+      label: 'Histórico',
+      children: (
+        <Table
+          dataSource={[...pedidos].sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm))}
+          rowKey="id"
+          loading={loading}
+          columns={[
+            { title: '#', dataIndex: 'id', key: 'id', width: 60 },
+            { title: 'Cliente', dataIndex: ['pessoa', 'nome'], key: 'pessoa' },
+            { title: 'Status', dataIndex: 'status', key: 'status', render: s => <Tag color={statusCor[s]}>{statusLabel[s]}</Tag> },
+            { title: 'Forma Pgto', dataIndex: 'formaPagamento', key: 'formaPagamento' },
+            { title: 'Total', dataIndex: 'valorTotal', key: 'valorTotal', render: v => `R$ ${v?.toFixed(2)}` },
+            { title: 'Data', dataIndex: 'criadoEm', key: 'criadoEm', render: d => new Date(d).toLocaleDateString('pt-BR') },
+          ]}
+        />
+      )
+    },
+    {
+      key: 'relatorios',
+      label: 'Relatórios',
+      children: (
+        <Row gutter={16}>
+          <Col span={6}><Card size="small"><Statistic title="Total de Pedidos" value={pedidos.length} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="Confirmados" value={pedidos.filter(p => p.status === 'Confirmado').length} valueStyle={{ color: 'green' }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="Cancelados" value={pedidos.filter(p => p.status === 'Cancelado').length} valueStyle={{ color: 'red' }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="Valor Total" value={pedidos.filter(p => p.status === 'Confirmado').reduce((acc, p) => acc + (p.valorTotal - p.desconto), 0)} precision={2} prefix="R$" /></Card></Col>
+          <Col span={24} style={{ marginTop: 16 }}>
+            <Card title="Pedidos por Status" size="small">
+              <Table
+                dataSource={['Orcamento', 'Pedido', 'Confirmado', 'Cancelado'].map(s => ({
+                  status: s,
+                  total: pedidos.filter(p => p.status === s).length,
+                  valor: pedidos.filter(p => p.status === s).reduce((acc, p) => acc + (p.valorTotal || 0), 0)
+                }))}
+                rowKey="status"
+                size="small"
+                pagination={false}
+                columns={[
+                  { title: 'Status', dataIndex: 'status', key: 'status', render: s => <Tag color={statusCor[s]}>{statusLabel[s]}</Tag> },
+                  { title: 'Quantidade', dataIndex: 'total', key: 'total' },
+                  { title: 'Valor Total', dataIndex: 'valor', key: 'valor', render: v => `R$ ${v.toFixed(2)}` },
+                ]}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )
+    }
+  ];
+
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -183,57 +268,7 @@ const Pedidos = () => {
         </Button>
       </div>
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Input
-            placeholder="Buscar por cliente..."
-            value={filtroCliente}
-            onChange={e => setFiltroCliente(e.target.value)}
-            allowClear
-          />
-        </Col>
-        <Col span={6}>
-          <Select placeholder="Filtrar por status" style={{ width: '100%' }} allowClear onChange={setFiltroStatus}>
-            <Option value="Orcamento">Orçamento</Option>
-            <Option value="Pedido">Pedido</Option>
-            <Option value="Confirmado">Confirmado</Option>
-            <Option value="Cancelado">Cancelado</Option>
-          </Select>
-        </Col>
-        <Col span={8}>
-          <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" onChange={setFiltroPeriodo} />
-        </Col>
-        <Col span={4}>
-          <Button onClick={() => { setFiltroStatus(null); setFiltroCliente(''); setFiltroPeriodo(null); }} block>
-            Limpar
-          </Button>
-        </Col>
-      </Row>
-
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title="Total" value={pedidosFiltrados.length} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title="Confirmados" value={pedidosFiltrados.filter(p => p.status === 'Confirmado').length} valueStyle={{ color: 'green' }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title="Pendentes" value={pedidosFiltrados.filter(p => p.status === 'Pedido' || p.status === 'Orcamento').length} valueStyle={{ color: '#fa8c16' }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title="Valor Total" value={pedidosFiltrados.reduce((acc, p) => acc + (p.valorTotal - p.desconto), 0)} precision={2} prefix="R$" />
-          </Card>
-        </Col>
-      </Row>
-
-      <Table dataSource={pedidosFiltrados} columns={colunas} rowKey="id" loading={loading} />
+      <Tabs items={tabItems} />
 
       {/* Modal detalhe do pedido */}
       <Modal
