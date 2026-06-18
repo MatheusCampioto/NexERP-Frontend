@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, InputNumber, Select, DatePicker, message, Tag, Space, Tabs, Card, Row, Col, Statistic, Divider } from 'antd';
 import { PlusOutlined, BankOutlined } from '@ant-design/icons';
-import { listarLancamentos, listarContasAPagar, listarContasAReceber, criarLancamento, baixarLancamento, cancelarLancamento } from '../services/financeiroService';
+import { listarContasAPagar, listarContasAReceber, criarLancamento, baixarLancamento, cancelarLancamento } from '../services/financeiroService';
 import { listarContasBancarias, criarContaBancaria } from '../services/contasBancariasService';
 import { listarPessoas } from '../services/pessoasService';
 

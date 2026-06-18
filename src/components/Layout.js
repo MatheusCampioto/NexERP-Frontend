@@ -75,6 +75,7 @@ const AppLayout = () => {
       label: 'Gestão de Pessoas',
       children: [
         { key: '/pessoas', label: 'Pessoas' },
+        { key: '/transportadora', label: 'Transportadoras' },
       ]
     },
     {
@@ -86,6 +87,7 @@ const AppLayout = () => {
         { key: '/configuracoes', icon: <SettingOutlined />, label: 'Configurações' },
         { key: '/usuarios', icon: <UserOutlined />, label: 'Usuários' },
         { key: '/serie', icon: <OrderedListOutlined />, label: 'Séries' },
+        { key: '/cfop', icon: <OrderedListOutlined />, label: 'CFOP' },
       ]
     },
     { key: '/perfil', icon: <UserOutlined />, label: 'Meu Perfil' },

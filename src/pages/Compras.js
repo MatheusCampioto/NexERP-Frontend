@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Tag, Space, Row, Col, DatePicker, Tabs, Popconfirm, Divider, Alert } from 'antd';
-import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined,} from '@ant-design/icons';
 import {
   listarSolicitacoes, criarSolicitacao, aprovarSolicitacao, reprovarSolicitacao, cancelarSolicitacao,
   listarOrdensCompra, criarOrdemCompra, cancelarOrdemCompra, atualizarStatusOrdem,

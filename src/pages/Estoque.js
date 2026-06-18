@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Tag, Alert, Row, Col, Card, Tabs } from 'antd';
-import { PlusOutlined, WarningOutlined, AuditOutlined } from '@ant-design/icons';
+import { PlusOutlined, AuditOutlined } from '@ant-design/icons';
 import { listarProdutos } from '../services/produtosService';
 import { listarMovimentacoes, movimentarEstoque } from '../services/estoqueService';
 import api from '../services/api';
