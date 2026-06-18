@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Space, Tag, Tabs, Row, Col, Switch, Divider } from 'antd';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Space, Tag, Tabs, Row, Col, Switch, Divider, Card, Statistic } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { listarProdutos, criarProduto, atualizarProduto, desativarProduto } from '../services/produtosService';
 import { listarCategorias, criarCategoria, desativarCategoria } from '../services/categoriasService';
@@ -168,47 +168,196 @@ const Produtos = () => {
     }
   ];
 
-  const tabItems = [
-    {
-      key: 'produtos',
-      label: 'Produtos',
-      children: (
-        <>
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={14}>
-              <Input
-                placeholder="Buscar por nome, código ou código de barras..."
-                prefix={<SearchOutlined />}
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-                allowClear
+const tabItems = [
+  {
+    key: 'produtos',
+    label: 'Produtos',
+    children: (
+      <>
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={14}>
+            <Input
+              placeholder="Buscar por nome, código ou código de barras..."
+              prefix={<SearchOutlined />}
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col span={10}>
+            <Select placeholder="Filtrar por categoria" style={{ width: '100%' }} allowClear onChange={setCategoriaFiltro}>
+              {categorias.map(c => <Option key={c.id} value={c.id}>{c.nome}</Option>)}
+            </Select>
+          </Col>
+        </Row>
+        <Table dataSource={filtrados} columns={colunas} rowKey="id" loading={loading} />
+      </>
+    )
+  },
+  {
+    key: 'categorias',
+    label: 'Categorias',
+    children: (
+      <>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalCategoria(true)}>
+            Nova Categoria
+          </Button>
+        </div>
+        <Table dataSource={categorias} columns={colunasCategoria} rowKey="id" />
+      </>
+    )
+  },
+  {
+    key: 'precos',
+    label: 'Controle de Preços',
+    children: (
+      <>
+        <Table
+          dataSource={filtrados}
+          rowKey="id"
+          loading={loading}
+          columns={[
+            { title: 'Produto', dataIndex: 'nome', key: 'nome' },
+            { title: 'Código', dataIndex: 'codigo', key: 'codigo' },
+            { title: 'Preço Custo', dataIndex: 'precoCusto', key: 'precoCusto', render: v => `R$ ${v?.toFixed(2)}` },
+            { title: 'Preço Venda', dataIndex: 'precoVenda', key: 'precoVenda', render: v => `R$ ${v?.toFixed(2)}` },
+            { title: 'Preço Mínimo', dataIndex: 'precoMinimo', key: 'precoMinimo', render: v => v ? `R$ ${v?.toFixed(2)}` : '-' },
+            {
+              title: 'Margem', key: 'margem',
+              render: (_, r) => r.precoCusto > 0
+                ? <Tag color={((r.precoVenda - r.precoCusto) / r.precoCusto * 100) >= 0 ? 'green' : 'red'}>
+                    {((r.precoVenda - r.precoCusto) / r.precoCusto * 100).toFixed(1)}%
+                  </Tag>
+                : '-'
+            },
+            {
+              title: 'Ações', key: 'acoes',
+              render: (_, record) => (
+                <Button icon={<EditOutlined />} size="small" onClick={() => abrirModal(record)}>Editar Preço</Button>
+              )
+            }
+          ]}
+        />
+      </>
+    )
+  },
+  {
+    key: 'alertas',
+    label: 'Alertas de Estoque',
+    children: (
+      <>
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic
+                title="Produtos com Estoque Baixo"
+                value={filtrados.filter(p => p.estoqueAtual <= p.estoqueMinimo).length}
+                valueStyle={{ color: 'red' }}
               />
-            </Col>
-            <Col span={10}>
-              <Select placeholder="Filtrar por categoria" style={{ width: '100%' }} allowClear onChange={setCategoriaFiltro}>
-                {categorias.map(c => <Option key={c.id} value={c.id}>{c.nome}</Option>)}
-              </Select>
-            </Col>
-          </Row>
-          <Table dataSource={filtrados} columns={colunas} rowKey="id" loading={loading} />
-        </>
-      )
-    },
-    {
-      key: 'categorias',
-      label: 'Categorias',
-      children: (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalCategoria(true)}>
-              Nova Categoria
-            </Button>
-          </div>
-          <Table dataSource={categorias} columns={colunasCategoria} rowKey="id" />
-        </>
-      )
-    }
-  ];
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic
+                title="Produtos sem Estoque"
+                value={filtrados.filter(p => p.estoqueAtual === 0).length}
+                valueStyle={{ color: 'red' }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic
+                title="Produtos com Validade"
+                value={filtrados.filter(p => p.controlaValidade).length}
+                valueStyle={{ color: 'orange' }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic
+                title="Total de Produtos"
+                value={filtrados.length}
+              />
+            </Card>
+          </Col>
+        </Row>
+        <Table
+          dataSource={filtrados.filter(p => p.estoqueAtual <= p.estoqueMinimo)}
+          rowKey="id"
+          loading={loading}
+          columns={[
+            { title: 'Produto', dataIndex: 'nome', key: 'nome' },
+            { title: 'Código', dataIndex: 'codigo', key: 'codigo' },
+            { title: 'Estoque Atual', dataIndex: 'estoqueAtual', key: 'estoqueAtual', render: v => <Tag color="red">{v}</Tag> },
+            { title: 'Estoque Mínimo', dataIndex: 'estoqueMinimo', key: 'estoqueMinimo' },
+            { title: 'Localização', dataIndex: 'localizacaoEstoque', key: 'localizacaoEstoque', render: v => v || '-' },
+            {
+              title: 'Ações', key: 'acoes',
+              render: (_, record) => (
+                <Button size="small" type="primary" onClick={() => abrirModal(record)}>Ver Produto</Button>
+              )
+            }
+          ]}
+        />
+      </>
+    )
+  },
+  {
+    key: 'relatorios',
+    label: 'Relatórios',
+    children: (
+      <Row gutter={16}>
+        <Col span={8}>
+          <Card title="Produtos por Categoria" size="small">
+            <Table
+              dataSource={categorias.map(c => ({
+                ...c,
+                total: filtrados.filter(p => p.categoriaId === c.id).length,
+                valorEstoque: filtrados.filter(p => p.categoriaId === c.id).reduce((acc, p) => acc + (p.estoqueAtual * p.precoCusto), 0)
+              }))}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              columns={[
+                { title: 'Categoria', dataIndex: 'nome', key: 'nome' },
+                { title: 'Qtd', dataIndex: 'total', key: 'total' },
+                { title: 'Valor Estoque', dataIndex: 'valorEstoque', key: 'valorEstoque', render: v => `R$ ${v.toFixed(2)}` },
+              ]}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card title="Top 10 Maior Margem" size="small">
+            <Table
+              dataSource={[...filtrados].sort((a, b) => {
+                const ma = a.precoCusto > 0 ? (a.precoVenda - a.precoCusto) / a.precoCusto : 0;
+                const mb = b.precoCusto > 0 ? (b.precoVenda - b.precoCusto) / b.precoCusto : 0;
+                return mb - ma;
+              }).slice(0, 10)}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              columns={[
+                { title: 'Produto', dataIndex: 'nome', key: 'nome' },
+                { title: 'Margem', key: 'margem', render: (_, r) => r.precoCusto > 0 ? `${((r.precoVenda - r.precoCusto) / r.precoCusto * 100).toFixed(1)}%` : '-' },
+              ]}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card title="Resumo Geral" size="small">
+            <Statistic title="Total de Produtos" value={filtrados.length} style={{ marginBottom: 8 }} />
+            <Statistic title="Valor Total em Estoque" value={filtrados.reduce((acc, p) => acc + (p.estoqueAtual * p.precoCusto), 0)} precision={2} prefix="R$" style={{ marginBottom: 8 }} />
+            <Statistic title="Produtos com Estoque Baixo" value={filtrados.filter(p => p.estoqueAtual <= p.estoqueMinimo).length} valueStyle={{ color: 'red' }} />
+          </Card>
+        </Col>
+      </Row>
+    )
+  }
+];
 
   return (
     <>
