@@ -14,6 +14,9 @@ import OrdemServico from './pages/OrdemServico';
 import Compras from './pages/Compras';
 import Perfil from './pages/Perfil';
 import Configuracoes from './pages/Configuracoes';
+import Filial from './pages/Filial';
+import Serie from './pages/Serie';
+
 
 const RotaProtegida = ({ children }) => {
   const { token, carregando } = useAuth();
@@ -51,6 +54,8 @@ const App = () => {
             <Route path="usuarios" element={<RotaComAcesso modulo="usuarios"><Usuarios /></RotaComAcesso>} />
             <Route path="perfil" element={<Perfil />} />
             <Route path="configuracoes" element={<Configuracoes />} />
+            <Route path="filial" element={<Filial />} />
+            <Route path="serie" element={<Serie />} />
           </Route>
         </Routes>
       </BrowserRouter>

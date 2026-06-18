@@ -1,37 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Form, Input, InputNumber, Select, Button, message, Tabs, Divider, Row, Col, Card } from 'antd';
+import { useState } from 'react';
+import { Form, InputNumber, Select, Button, message, Tabs, Row, Col, Card, Switch } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
-import { obterConfiguracao, salvarConfiguracao } from '../services/configuracaoService';
 
 const { Option } = Select;
 
 const Configuracoes = () => {
-  const [loading, setLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [form] = Form.useForm();
-
-  useEffect(() => {
-    const carregar = async () => {
-      setLoading(true);
-      try {
-        const data = await obterConfiguracao();
-        form.setFieldsValue(data);
-      } catch {
-        message.error('Erro ao carregar configurações.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    carregar();
-  }, [form]);
 
   const salvar = async (values) => {
     setSalvando(true);
     try {
-      await salvarConfiguracao(values);
-      message.success('Configurações salvas com sucesso!');
+      // futuramente: await salvarParametros(values);
+      message.success('Parâmetros salvos com sucesso!');
     } catch {
-      message.error('Erro ao salvar configurações.');
+      message.error('Erro ao salvar parâmetros.');
     } finally {
       setSalvando(false);
     }
@@ -39,149 +22,72 @@ const Configuracoes = () => {
 
   const tabItems = [
     {
-      key: 'empresa',
-      label: 'Dados da Empresa',
+      key: 'vendas',
+      label: 'Vendas',
       children: (
         <>
           <Row gutter={16}>
-            <Col span={16}>
-              <Form.Item name="nomeEmpresa" label="Razão Social" rules={[{ required: true }]}>
-                <Input />
+            <Col span={12}>
+              <Form.Item name="permiteEstoqueNegativo" label="Permite venda com estoque negativo" valuePropName="checked">
+                <Switch checkedChildren="Sim" unCheckedChildren="Não" />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="cnpj" label="CNPJ">
-                <Input placeholder="00.000.000/0000-00" maxLength={18} />
+            <Col span={12}>
+              <Form.Item name="exigeAprovacaoPedido" label="Exige aprovação de pedido" valuePropName="checked">
+                <Switch checkedChildren="Sim" unCheckedChildren="Não" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="nomeFantasia" label="Nome Fantasia">
-                <Input />
+              <Form.Item name="descontoMaximoVendedor" label="Desconto máximo por vendedor (%)">
+                <InputNumber min={0} max={100} precision={2} suffix="%" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="regimeTributario" label="Regime Tributário">
+              <Form.Item name="valorMinimoAprovacao" label="Valor mínimo para aprovação (R$)">
+                <InputNumber min={0} precision={2} prefix="R$" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="prazoMaximoOrcamento" label="Prazo máximo de orçamento (dias)">
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="formaPagamentoPadrao" label="Forma de pagamento padrão">
                 <Select allowClear>
-                  <Option value="SimplesNacional">Simples Nacional</Option>
-                  <Option value="LucroPresumido">Lucro Presumido</Option>
-                  <Option value="LucroReal">Lucro Real</Option>
+                  <Option value="Dinheiro">Dinheiro</Option>
+                  <Option value="PIX">PIX</Option>
+                  <Option value="Boleto">Boleto</Option>
+                  <Option value="Cartão de Crédito">Cartão de Crédito</Option>
+                  <Option value="Transferência">Transferência</Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="inscricaoEstadual" label="Inscrição Estadual">
-                <Input maxLength={20} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="inscricaoMunicipal" label="Inscrição Municipal">
-                <Input maxLength={20} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="email" label="E-mail">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="telefone" label="Telefone">
-                <Input placeholder="(00) 0000-0000" maxLength={15} />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="site" label="Site">
-                <Input placeholder="www.empresa.com.br" />
-              </Form.Item>
-            </Col>
-          </Row>
         </>
       )
     },
     {
-      key: 'endereco',
-      label: 'Endereço',
-      children: (
-        <>
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item name="cep" label="CEP">
-                <Input placeholder="00000-000" maxLength={9} />
-              </Form.Item>
-            </Col>
-            <Col span={14}>
-              <Form.Item name="endereco" label="Logradouro">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={4}>
-              <Form.Item name="numero" label="Número">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="complemento" label="Complemento">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="bairro" label="Bairro">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="cidade" label="Cidade">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={2}>
-              <Form.Item name="estado" label="UF">
-                <Input maxLength={2} />
-              </Form.Item>
-            </Col>
-          </Row>
-        </>
-      )
-    },
-    {
-      key: 'fiscal',
-      label: 'Fiscal',
+      key: 'estoque',
+      label: 'Estoque',
       children: (
         <>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="cfop_PadraoVenda" label="CFOP Padrão Venda">
-                <Input placeholder="5102" maxLength={5} />
+              <Form.Item name="baixaEstoque" label="Baixar estoque ao">
+                <Select>
+                  <Option value="confirmar">Confirmar pedido</Option>
+                  <Option value="faturar">Faturar</Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="cfop_PadraoCompra" label="CFOP Padrão Compra">
-                <Input placeholder="1102" maxLength={5} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Divider>Alíquotas Padrão</Divider>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="aliquotaICMS_Padrao" label="ICMS (%)">
-                <InputNumber min={0} max={100} precision={2} suffix="%" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="aliquotaPIS_Padrao" label="PIS (%)">
-                <InputNumber min={0} max={100} precision={2} suffix="%" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="aliquotaCOFINS_Padrao" label="COFINS (%)">
-                <InputNumber min={0} max={100} precision={2} suffix="%" style={{ width: '100%' }} />
+              <Form.Item name="permiteAjusteManual" label="Permite ajuste manual de estoque" valuePropName="checked">
+                <Switch checkedChildren="Sim" unCheckedChildren="Não" />
               </Form.Item>
             </Col>
           </Row>
@@ -189,16 +95,46 @@ const Configuracoes = () => {
       )
     },
     {
-      key: 'sistema',
-      label: 'Sistema',
+      key: 'financeiro',
+      label: 'Financeiro',
       children: (
-        <Row gutter={16}>
-          <Col span={6}>
-            <Form.Item name="moedaSimbolo" label="Símbolo da Moeda">
-              <Input placeholder="R$" maxLength={5} />
-            </Form.Item>
-          </Col>
-        </Row>
+        <>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="geraFinanceiroAoFaturar" label="Gera financeiro automaticamente ao faturar" valuePropName="checked">
+                <Switch checkedChildren="Sim" unCheckedChildren="Não" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="diasToleranciaVencimento" label="Dias de tolerância para vencimento">
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </>
+      )
+    },
+    {
+      key: 'nfe',
+      label: 'NF-e',
+      children: (
+        <>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="ambienteNFe" label="Ambiente NF-e">
+                <Select>
+                  <Option value="homologacao">Homologação</Option>
+                  <Option value="producao">Produção</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="contingencia" label="Contingência" valuePropName="checked">
+                <Switch checkedChildren="Ativa" unCheckedChildren="Inativa" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </>
       )
     }
   ];
@@ -211,8 +147,7 @@ const Configuracoes = () => {
           Salvar
         </Button>
       </div>
-
-      <Card loading={loading}>
+      <Card>
         <Form form={form} layout="vertical" onFinish={salvar}>
           <Tabs items={tabItems} />
         </Form>
