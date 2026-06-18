@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Switch, Row, Col, Upload, Tag, Divider, Card, Tabs } from 'antd';
-import { PlusOutlined, EditOutlined, UploadOutlined, SaveOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, message, Switch, Row, Col, Upload, Tag, Card } from 'antd';
+import { PlusOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import { listarPessoas } from '../services/pessoasService';
-import { obterConfiguracao, salvarConfiguracao } from '../services/configuracaoService';
 
 const { Option } = Select;
 
@@ -13,16 +12,13 @@ const Filial = () => {
   const [modalAberto, setModalAberto] = useState(false);
   const [filialEditando, setFilialEditando] = useState(null);
   const [ativa, setAtiva] = useState(true);
-  const [salvando, setSalvando] = useState(false);
   const [form] = Form.useForm();
-  const [formConfig] = Form.useForm();
 
   const carregar = async () => {
     setLoading(true);
     try {
-      const [p, config] = await Promise.all([listarPessoas(), obterConfiguracao()]);
+      const p = await listarPessoas();
       setPessoas(p);
-      formConfig.setFieldsValue(config);
     } catch {
       message.error('Erro ao carregar dados.');
     } finally {
@@ -30,7 +26,7 @@ const Filial = () => {
     }
   };
 
-useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const abrirModal = (filial = null) => {
     setFilialEditando(filial);
@@ -45,7 +41,7 @@ useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaust
     setModalAberto(true);
   };
 
-  const salvarFilial = async (values) => {
+  const salvar = (values) => {
     const dados = { ...values, ativa };
     if (filialEditando) {
       setFiliais(filiais.map(f => f.numero === filialEditando.numero ? { ...f, ...dados } : f));
@@ -58,18 +54,6 @@ useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaust
     form.resetFields();
   };
 
-  const salvarConfig = async (values) => {
-    setSalvando(true);
-    try {
-      await salvarConfiguracao(values);
-      message.success('Configurações salvas!');
-    } catch {
-      message.error('Erro ao salvar.');
-    } finally {
-      setSalvando(false);
-    }
-  };
-
   const buscarCep = async (cep) => {
     const cepLimpo = cep.replace(/\D/g, '');
     if (cepLimpo.length !== 8) return;
@@ -77,12 +61,13 @@ useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaust
       const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
       const data = await response.json();
       if (data.erro) { message.error('CEP não encontrado.'); return; }
-      formConfig.setFieldsValue({
+      form.setFieldsValue({
         endereco: data.logradouro,
         bairro: data.bairro,
         cidade: data.localidade,
         estado: data.uf,
       });
+      message.success('Endereço preenchido!');
     } catch {
       message.error('Erro ao buscar CEP.');
     }
@@ -92,38 +77,61 @@ useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaust
     { title: '#', dataIndex: 'numero', key: 'numero', width: 60 },
     { title: 'Descrição', dataIndex: 'descricao', key: 'descricao' },
     { title: 'CNPJ', dataIndex: 'cnpj', key: 'cnpj' },
+    { title: 'Cidade', dataIndex: 'cidade', key: 'cidade' },
     { title: 'CRT', dataIndex: 'crt', key: 'crt' },
-    { title: 'Status', dataIndex: 'ativa', key: 'ativa', render: v => <Tag color={v ? 'green' : 'red'}>{v ? 'Ativa' : 'Inativa'}</Tag> },
-    { title: 'Ações', key: 'acoes', render: (_, record) => <Button icon={<EditOutlined />} size="small" onClick={() => abrirModal(record)} /> }
-  ];
-
-  const tabItems = [
     {
-      key: 'filiais',
-      label: 'Filiais',
-      children: (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => abrirModal()}>Nova Filial</Button>
-          </div>
-          <Table dataSource={filiais} columns={colunas} rowKey="numero" loading={loading} />
-        </>
-      )
+      title: 'Tipo', key: 'tipo',
+      render: (_, r) => <Tag color={r.numero === 1 ? 'gold' : 'blue'}>{r.numero === 1 ? 'Matriz' : 'Filial'}</Tag>
     },
     {
-      key: 'empresa',
-      label: 'Dados da Empresa',
-      children: (
-        <Form form={formConfig} layout="vertical" onFinish={salvarConfig}>
+      title: 'Status', dataIndex: 'ativa', key: 'ativa',
+      render: v => <Tag color={v ? 'green' : 'red'}>{v ? 'Ativa' : 'Inativa'}</Tag>
+    },
+    {
+      title: 'Ações', key: 'acoes',
+      render: (_, record) => (
+        <Button icon={<EditOutlined />} size="small" onClick={() => abrirModal(record)} />
+      )
+    }
+  ];
+
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2>Filiais</h2>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => abrirModal()}>
+          {filiais.length === 0 ? 'Cadastrar Matriz' : 'Nova Filial'}
+        </Button>
+      </div>
+
+      <Card loading={loading}>
+        <Table dataSource={filiais} columns={colunas} rowKey="numero" />
+      </Card>
+
+      <Modal
+        title={filialEditando ? 'Editar Filial' : filiais.length === 0 ? 'Cadastrar Matriz' : 'Nova Filial'}
+        open={modalAberto}
+        onCancel={() => { setModalAberto(false); form.resetFields(); }}
+        onOk={() => form.submit()}
+        okText="Salvar"
+        cancelText="Cancelar"
+        width={750}
+      >
+        <Form form={form} layout="vertical" onFinish={salvar}>
           <Row gutter={16}>
-            <Col span={16}>
-              <Form.Item name="nomeEmpresa" label="Razão Social" rules={[{ required: true }]}>
+            <Col span={4}>
+              <Form.Item name="numero" label="Número">
+                <Input disabled />
+              </Form.Item>
+            </Col>
+            <Col span={14}>
+              <Form.Item name="descricao" label="Razão Social" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="cnpj" label="CNPJ">
-                <Input placeholder="00.000.000/0000-00" maxLength={18} />
+            <Col span={6}>
+              <Form.Item label="Status">
+                <Switch checked={ativa} onChange={setAtiva} checkedChildren="Ativa" unCheckedChildren="Inativa" />
               </Form.Item>
             </Col>
           </Row>
@@ -134,160 +142,8 @@ useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaust
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="regimeTributario" label="Regime Tributário">
-                <Select allowClear>
-                  <Option value="SimplesNacional">Simples Nacional</Option>
-                  <Option value="LucroPresumido">Lucro Presumido</Option>
-                  <Option value="LucroReal">Lucro Real</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="inscricaoEstadual" label="Inscrição Estadual">
-                <Input maxLength={20} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="inscricaoMunicipal" label="Inscrição Municipal">
-                <Input maxLength={20} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="email" label="E-mail">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="telefone" label="Telefone">
-                <Input placeholder="(00) 0000-0000" maxLength={15} />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="site" label="Site">
-                <Input placeholder="www.empresa.com.br" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Divider>Endereço</Divider>
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item name="cep" label="CEP">
-                <Input placeholder="00000-000" maxLength={9} onChange={e => buscarCep(e.target.value)} />
-              </Form.Item>
-            </Col>
-            <Col span={14}>
-              <Form.Item name="endereco" label="Logradouro">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={4}>
-              <Form.Item name="numero" label="Número">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="complemento" label="Complemento">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="bairro" label="Bairro">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="cidade" label="Cidade">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={2}>
-              <Form.Item name="estado" label="UF">
-                <Input maxLength={2} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Divider>Fiscal</Divider>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="cfop_PadraoVenda" label="CFOP Padrão Venda">
-                <Input placeholder="5102" maxLength={5} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="cfop_PadraoCompra" label="CFOP Padrão Compra">
-                <Input placeholder="1102" maxLength={5} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="aliquotaICMS_Padrao" label="ICMS (%)">
-                <InputNumber min={0} max={100} precision={2} suffix="%" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="aliquotaPIS_Padrao" label="PIS (%)">
-                <InputNumber min={0} max={100} precision={2} suffix="%" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="aliquotaCOFINS_Padrao" label="COFINS (%)">
-                <InputNumber min={0} max={100} precision={2} suffix="%" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item name="moedaSimbolo" label="Símbolo da Moeda">
-                <Input placeholder="R$" maxLength={5} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-            <Button type="primary" icon={<SaveOutlined />} htmlType="submit" loading={salvando}>Salvar</Button>
-          </div>
-        </Form>
-      )
-    }
-  ];
-
-  return (
-    <>
-      <h2>Filial</h2>
-      <Card loading={loading}>
-        <Tabs items={tabItems} />
-      </Card>
-
-      <Modal
-        title={filialEditando ? 'Editar Filial' : 'Nova Filial'}
-        open={modalAberto}
-        onCancel={() => { setModalAberto(false); form.resetFields(); }}
-        onOk={() => form.submit()}
-        okText="Salvar"
-        cancelText="Cancelar"
-        width={750}
-      >
-        <Form form={form} layout="vertical" onFinish={salvarFilial}>
-          <Row gutter={16}>
-            <Col span={4}>
-              <Form.Item name="numero" label="Número">
-                <Input disabled />
-              </Form.Item>
-            </Col>
-            <Col span={14}>
-              <Form.Item name="descricao" label="Descrição" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Status">
-                <Switch checked={ativa} onChange={setAtiva} checkedChildren="Ativa" unCheckedChildren="Inativa" />
+              <Form.Item name="cnpj" label="CNPJ">
+                <Input placeholder="00.000.000/0000-00" maxLength={18} />
               </Form.Item>
             </Col>
           </Row>
@@ -300,8 +156,8 @@ useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaust
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="cnpj" label="CNPJ">
-                <Input placeholder="00.000.000/0000-00" maxLength={18} />
+              <Form.Item name="inscricaoEstadual" label="Inscrição Estadual">
+                <Input maxLength={20} />
               </Form.Item>
             </Col>
           </Row>
@@ -352,6 +208,45 @@ useEffect(() => { carregar(); }, []); // eslint-disable-line react-hooks/exhaust
                 <Upload maxCount={1} beforeUpload={() => false}>
                   <Button icon={<UploadOutlined />}>Upload .pfx</Button>
                 </Upload>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={6}>
+              <Form.Item name="cep" label="CEP">
+                <Input placeholder="00000-000" maxLength={9} onChange={e => buscarCep(e.target.value)} />
+              </Form.Item>
+            </Col>
+            <Col span={14}>
+              <Form.Item name="endereco" label="Logradouro">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={4}>
+              <Form.Item name="numero_end" label="Número">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="bairro" label="Bairro">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="cidade" label="Cidade">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={4}>
+              <Form.Item name="estado" label="UF">
+                <Input maxLength={2} />
+              </Form.Item>
+            </Col>
+            <Col span={4}>
+              <Form.Item name="email" label="E-mail">
+                <Input />
               </Form.Item>
             </Col>
           </Row>
