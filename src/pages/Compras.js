@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Tag, Space, Row, Col, DatePicker, Tabs, Popconfirm, Divider, Alert } from 'antd';
-import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined,} from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Tag, Space, Row, Col, DatePicker, Tabs, Popconfirm, Divider, Alert, Card, Statistic } from 'antd';import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined,} from '@ant-design/icons';
 import {
   listarSolicitacoes, criarSolicitacao, aprovarSolicitacao, reprovarSolicitacao, cancelarSolicitacao,
   listarOrdensCompra, criarOrdemCompra, cancelarOrdemCompra, atualizarStatusOrdem,
@@ -438,6 +437,69 @@ const imprimirOrdemCompra = (oc) => {
           </div>
           <Table dataSource={condicoes} columns={colunasCondicao} rowKey="id" loading={loading} />
         </>
+      )
+    },
+    {
+      key: 'relatorios',
+      label: 'Relatórios',
+      children: (
+        <Row gutter={16}>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Solicitações Pendentes" value={solicitacoes.filter(s => s.status === 'Pendente').length} valueStyle={{ color: 'orange' }} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Ordens Abertas" value={ordens.filter(o => o.status === 'Aberta').length} valueStyle={{ color: 'blue' }} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Ordens Recebidas" value={ordens.filter(o => o.status === 'Recebida').length} valueStyle={{ color: 'green' }} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small">
+              <Statistic title="Valor Total OC" value={ordens.reduce((acc, o) => acc + (o.valorTotal || 0), 0)} precision={2} prefix="R$" />
+            </Card>
+          </Col>
+          <Col span={24} style={{ marginTop: 16 }}>
+            <Card title="Ordens de Compra por Status" size="small">
+              <Table
+                dataSource={['Aberta', 'Enviada', 'Recebida', 'Cancelada'].map(s => ({
+                  status: s,
+                  total: ordens.filter(o => o.status === s).length,
+                  valor: ordens.filter(o => o.status === s).reduce((acc, o) => acc + (o.valorTotal || 0), 0)
+                }))}
+                rowKey="status"
+                size="small"
+                pagination={false}
+                columns={[
+                  { title: 'Status', dataIndex: 'status', key: 'status', render: s => <Tag>{s}</Tag> },
+                  { title: 'Quantidade', dataIndex: 'total', key: 'total' },
+                  { title: 'Valor Total', dataIndex: 'valor', key: 'valor', render: v => `R$ ${v.toFixed(2)}` },
+                ]}
+              />
+            </Card>
+          </Col>
+          <Col span={24} style={{ marginTop: 16 }}>
+            <Card title="NFs de Entrada" size="small">
+              <Table
+                dataSource={notas}
+                rowKey="id"
+                size="small"
+                pagination={{ pageSize: 5 }}
+                columns={[
+                  { title: 'NF', dataIndex: 'numeroNF', key: 'numeroNF' },
+                  { title: 'Fornecedor', key: 'fornecedor', render: (_, r) => r.ordemCompra?.fornecedor?.razaoSocial || '-' },
+                  { title: 'Valor Total', dataIndex: 'valorTotal', key: 'valorTotal', render: v => `R$ ${v?.toFixed(2)}` },
+                  { title: 'Estoque', dataIndex: 'estoqueAtualizado', key: 'estoqueAtualizado', render: v => <Tag color={v ? 'green' : 'orange'}>{v ? 'Atualizado' : 'Pendente'}</Tag> },
+                ]}
+              />
+            </Card>
+          </Col>
+        </Row>
       )
     }
   ];
