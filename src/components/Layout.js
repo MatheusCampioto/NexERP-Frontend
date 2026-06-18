@@ -59,6 +59,7 @@ const AppLayout = () => {
         { key: '/ordemservico', label: 'Ordem de Serviço' },
         { key: '/faturamento', label: 'Faturamento' },
         { key: '/tabelapreco', label: 'Tabelas de Preço' },
+        { key: '/tipopedido', label: 'Tipo de Pedido' },
       ]
     },
     {
@@ -76,7 +77,7 @@ const AppLayout = () => {
       label: 'Gestão de Pessoas',
       children: [
         { key: '/pessoas', label: 'Pessoas' },
-        
+        { key: '/transportadora', label: 'Transportadoras' },
       ]
     },
     {

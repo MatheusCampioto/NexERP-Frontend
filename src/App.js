@@ -19,6 +19,7 @@ import Serie from './pages/Serie';
 import CFOP from './pages/CFOP';
 import Transportadora from './pages/Transportadora';
 import TabelaPreco from './pages/TabelaPreco';
+import TipoPedido from './pages/TipoPedido';
 
 const RotaProtegida = ({ children }) => {
   const { token, carregando } = useAuth();
@@ -61,6 +62,7 @@ const App = () => {
             <Route path="cfop" element={<CFOP />} />
             <Route path="transportadora" element={<Transportadora />} />
             <Route path="tabelapreco" element={<TabelaPreco />} />
+            <Route path="tipopedido" element={<TipoPedido />} />
 
 
           </Route>
