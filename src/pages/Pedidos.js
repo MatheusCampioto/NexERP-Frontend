@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Select, Input, InputNumber, message, Tag, Space, Divider, Card, Row, Col, Statistic, DatePicker, Tabs, Steps, Alert, Tooltip } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, PrinterOutlined, EditOutlined, CheckOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons';
-import { listarPedidos, criarPedido } from '../services/pedidosService';
 import { listarPessoas } from '../services/pessoasService';
 import { listarProdutos } from '../services/produtosService';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
+import { listarPedidos, criarPedido, atualizarPedido } from '../services/pedidosService';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -132,22 +132,31 @@ const Pedidos = () => {
   };
 
   const salvar = async (values) => {
-    try {
-      const dados = {
-        ...values,
-        desconto: values.desconto || 0,
-        itens: itensPedido.filter(i => i.produtoId),
-        dataEntregaPrevista: values.dataEntregaPrevista ? values.dataEntregaPrevista.toISOString() : null,
-      };
+  try {
+    const dados = {
+      ...values,
+      desconto: values.desconto || 0,
+      itens: itensPedido.filter(i => i.produtoId).map(i => ({
+        produtoId: i.produtoId,
+        quantidade: i.quantidade,
+        desconto: i.desconto || 0,
+      })),
+      dataEntregaPrevista: values.dataEntregaPrevista ? values.dataEntregaPrevista.toISOString() : null,
+    };
+    if (pedidoEditando) {
+      await atualizarPedido(pedidoEditando.id, dados);
+      message.success('Pedido atualizado!');
+    } else {
       await criarPedido(dados);
-      message.success(pedidoEditando ? 'Pedido atualizado!' : 'Pedido criado!');
-      setModalAberto(false);
-      form.resetFields();
-      carregar();
-    } catch (e) {
-      message.error(e.response?.data?.mensagem || 'Erro ao salvar pedido.');
+      message.success('Pedido criado!');
     }
-  };
+    setModalAberto(false);
+    form.resetFields();
+    carregar();
+  } catch (e) {
+    message.error(e.response?.data?.mensagem || 'Erro ao salvar pedido.');
+  }
+};
 
   const avancar = async (id) => {
     try {

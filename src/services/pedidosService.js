@@ -15,6 +15,11 @@ export const criarPedido = async (dados) => {
   return response.data;
 };
 
+export const atualizarPedido = async (id, dados) => {
+  const response = await api.put(`/Pedidos/${id}`, dados);
+  return response.data;
+};
+
 export const confirmarPedido = async (id) => {
   const response = await api.patch(`/Pedidos/${id}/confirmar`);
   return response.data;
