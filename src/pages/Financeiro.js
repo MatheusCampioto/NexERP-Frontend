@@ -53,6 +53,12 @@ const Financeiro = () => {
   const [tipoModal, setTipoModal] = useState('Receita');
   const [formLancamento] = Form.useForm();
   const [formConta] = Form.useForm();
+  const [filtroReceber, setFiltroReceber] = useState('');
+const [filtroStatusReceber, setFiltroStatusReceber] = useState(null);
+const [filtroPeriodoReceber, setFiltroPeriodoReceber] = useState(null);
+const [filtroPagar, setFiltroPagar] = useState('');
+const [filtroStatusPagar, setFiltroStatusPagar] = useState(null);
+const [filtroPeriodoPagar, setFiltroPeriodoPagar] = useState(null);
 
   const carregar = async () => {
     setLoading(true);
@@ -156,12 +162,61 @@ const Financeiro = () => {
       label: 'Contas a Receber',
       children: (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => abrirModalLancamento('Receita')}>
-              Nova Receita
-            </Button>
-          </div>
-          <TabelaLancamentos dados={receber} loading={loading} onBaixar={baixar} onCancelar={cancelar} />
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={8}>
+              <Input
+                placeholder="Buscar por descrição..."
+                allowClear
+                onChange={e => setFiltroReceber(e.target.value)}
+              />
+            </Col>
+            <Col span={6}>
+              <Select placeholder="Status" style={{ width: '100%' }} allowClear onChange={setFiltroStatusReceber}>
+                <Option value="Pendente">Pendente</Option>
+                <Option value="Pago">Pago</Option>
+                <Option value="Cancelado">Cancelado</Option>
+              </Select>
+            </Col>
+            <Col span={6}>
+              <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" onChange={setFiltroPeriodoReceber} />
+            </Col>
+            <Col span={4}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => abrirModalLancamento('Receita')} block>
+                Nova Receita
+              </Button>
+            </Col>
+          </Row>
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="Total a Receber" value={receber.filter(l => l.status === 'Pendente').reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'green' }} />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="Vencidos" value={receber.filter(l => l.status === 'Pendente' && new Date(l.dataVencimento) < new Date()).reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'red' }} />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="Recebidos" value={receber.filter(l => l.status === 'Pago').reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'blue' }} />
+              </Card>
+            </Col>
+          </Row>
+          <TabelaLancamentos
+            dados={receber.filter(l => {
+              if (filtroReceber && !l.descricao?.toLowerCase().includes(filtroReceber.toLowerCase())) return false;
+              if (filtroStatusReceber && l.status !== filtroStatusReceber) return false;
+              if (filtroPeriodoReceber) {
+                const data = new Date(l.dataVencimento);
+                if (data < filtroPeriodoReceber[0].toDate() || data > filtroPeriodoReceber[1].toDate()) return false;
+              }
+              return true;
+            })}
+            loading={loading}
+            onBaixar={baixar}
+            onCancelar={cancelar}
+          />
         </>
       )
     },
@@ -170,12 +225,61 @@ const Financeiro = () => {
       label: 'Contas a Pagar',
       children: (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => abrirModalLancamento('Despesa')}>
-              Nova Despesa
-            </Button>
-          </div>
-          <TabelaLancamentos dados={pagar} loading={loading} onBaixar={baixar} onCancelar={cancelar} />
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={8}>
+              <Input
+                placeholder="Buscar por descrição..."
+                allowClear
+                onChange={e => setFiltroPagar(e.target.value)}
+              />
+            </Col>
+            <Col span={6}>
+              <Select placeholder="Status" style={{ width: '100%' }} allowClear onChange={setFiltroStatusPagar}>
+                <Option value="Pendente">Pendente</Option>
+                <Option value="Pago">Pago</Option>
+                <Option value="Cancelado">Cancelado</Option>
+              </Select>
+            </Col>
+            <Col span={6}>
+              <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" onChange={setFiltroPeriodoPagar} />
+            </Col>
+            <Col span={4}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => abrirModalLancamento('Despesa')} block>
+                Nova Despesa
+              </Button>
+            </Col>
+          </Row>
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="Total a Pagar" value={pagar.filter(l => l.status === 'Pendente').reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'red' }} />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="Vencidos" value={pagar.filter(l => l.status === 'Pendente' && new Date(l.dataVencimento) < new Date()).reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'red' }} />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card size="small">
+                <Statistic title="Pagos" value={pagar.filter(l => l.status === 'Pago').reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'blue' }} />
+              </Card>
+            </Col>
+          </Row>
+          <TabelaLancamentos
+            dados={pagar.filter(l => {
+              if (filtroPagar && !l.descricao?.toLowerCase().includes(filtroPagar.toLowerCase())) return false;
+              if (filtroStatusPagar && l.status !== filtroStatusPagar) return false;
+              if (filtroPeriodoPagar) {
+                const data = new Date(l.dataVencimento);
+                if (data < filtroPeriodoPagar[0].toDate() || data > filtroPeriodoPagar[1].toDate()) return false;
+              }
+              return true;
+            })}
+            loading={loading}
+            onBaixar={baixar}
+            onCancelar={cancelar}
+          />
         </>
       )
     },
@@ -221,24 +325,12 @@ const Financeiro = () => {
           {fluxo && (
             <>
               <Row gutter={[16, 16]}>
-                <Col xs={24} sm={8}>
-                  <Card><Statistic title="Receitas Previstas" value={fluxo.receitas} prefix="R$" precision={2} valueStyle={{ color: '#3f8600' }} /></Card>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Card><Statistic title="Despesas Previstas" value={fluxo.despesas} prefix="R$" precision={2} valueStyle={{ color: '#cf1322' }} /></Card>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Card><Statistic title="Saldo Previsto" value={fluxo.saldoPrevisto} prefix="R$" precision={2} valueStyle={{ color: fluxo.saldoPrevisto >= 0 ? '#3f8600' : '#cf1322' }} /></Card>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Card><Statistic title="Receitas Pagas" value={fluxo.receitasPagas} prefix="R$" precision={2} valueStyle={{ color: '#3f8600' }} /></Card>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Card><Statistic title="Despesas Pagas" value={fluxo.despesasPagas} prefix="R$" precision={2} valueStyle={{ color: '#cf1322' }} /></Card>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Card><Statistic title="Saldo Realizado" value={fluxo.saldoRealizado} prefix="R$" precision={2} valueStyle={{ color: fluxo.saldoRealizado >= 0 ? '#3f8600' : '#cf1322' }} /></Card>
-                </Col>
+                <Col xs={24} sm={8}><Card><Statistic title="Receitas Previstas" value={fluxo.receitas} prefix="R$" precision={2} valueStyle={{ color: '#3f8600' }} /></Card></Col>
+                <Col xs={24} sm={8}><Card><Statistic title="Despesas Previstas" value={fluxo.despesas} prefix="R$" precision={2} valueStyle={{ color: '#cf1322' }} /></Card></Col>
+                <Col xs={24} sm={8}><Card><Statistic title="Saldo Previsto" value={fluxo.saldoPrevisto} prefix="R$" precision={2} valueStyle={{ color: fluxo.saldoPrevisto >= 0 ? '#3f8600' : '#cf1322' }} /></Card></Col>
+                <Col xs={24} sm={8}><Card><Statistic title="Receitas Pagas" value={fluxo.receitasPagas} prefix="R$" precision={2} valueStyle={{ color: '#3f8600' }} /></Card></Col>
+                <Col xs={24} sm={8}><Card><Statistic title="Despesas Pagas" value={fluxo.despesasPagas} prefix="R$" precision={2} valueStyle={{ color: '#cf1322' }} /></Card></Col>
+                <Col xs={24} sm={8}><Card><Statistic title="Saldo Realizado" value={fluxo.saldoRealizado} prefix="R$" precision={2} valueStyle={{ color: fluxo.saldoRealizado >= 0 ? '#3f8600' : '#cf1322' }} /></Card></Col>
               </Row>
               <Divider>Por Categoria</Divider>
               <Table
@@ -254,6 +346,56 @@ const Financeiro = () => {
             </>
           )}
         </>
+      )
+    },
+    {
+      key: 'relatorios',
+      label: 'Relatórios',
+      children: (
+        <Row gutter={16}>
+          <Col span={6}><Card size="small"><Statistic title="Total Receitas" value={receber.reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'green' }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="Total Despesas" value={pagar.reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: 'red' }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="Saldo" value={receber.reduce((acc, l) => acc + l.valor, 0) - pagar.reduce((acc, l) => acc + l.valor, 0)} precision={2} prefix="R$" valueStyle={{ color: receber.reduce((acc, l) => acc + l.valor, 0) - pagar.reduce((acc, l) => acc + l.valor, 0) >= 0 ? 'green' : 'red' }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title="Inadimplência" value={receber.filter(l => l.status === 'Pendente' && new Date(l.dataVencimento) < new Date()).length} suffix="lançamentos" /></Card></Col>
+          <Col span={24} style={{ marginTop: 16 }}>
+            <Card title="Receitas por Categoria" size="small">
+              <Table
+                dataSource={[...new Set(receber.map(l => l.categoria).filter(Boolean))].map(cat => ({
+                  categoria: cat,
+                  total: receber.filter(l => l.categoria === cat).reduce((acc, l) => acc + l.valor, 0),
+                  pago: receber.filter(l => l.categoria === cat && l.status === 'Pago').reduce((acc, l) => acc + l.valor, 0),
+                }))}
+                rowKey="categoria"
+                size="small"
+                pagination={false}
+                columns={[
+                  { title: 'Categoria', dataIndex: 'categoria' },
+                  { title: 'Total', dataIndex: 'total', render: v => `R$ ${v.toFixed(2)}` },
+                  { title: 'Recebido', dataIndex: 'pago', render: v => `R$ ${v.toFixed(2)}` },
+                ]}
+              />
+            </Card>
+          </Col>
+          <Col span={24} style={{ marginTop: 16 }}>
+            <Card title="Despesas por Categoria" size="small">
+              <Table
+                dataSource={[...new Set(pagar.map(l => l.categoria).filter(Boolean))].map(cat => ({
+                  categoria: cat,
+                  total: pagar.filter(l => l.categoria === cat).reduce((acc, l) => acc + l.valor, 0),
+                  pago: pagar.filter(l => l.categoria === cat && l.status === 'Pago').reduce((acc, l) => acc + l.valor, 0),
+                }))}
+                rowKey="categoria"
+                size="small"
+                pagination={false}
+                columns={[
+                  { title: 'Categoria', dataIndex: 'categoria' },
+                  { title: 'Total', dataIndex: 'total', render: v => `R$ ${v.toFixed(2)}` },
+                  { title: 'Pago', dataIndex: 'pago', render: v => `R$ ${v.toFixed(2)}` },
+                ]}
+              />
+            </Card>
+          </Col>
+        </Row>
       )
     }
   ];
